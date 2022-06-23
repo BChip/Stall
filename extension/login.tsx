@@ -4,18 +4,19 @@ import {
   onAuthStateChanged,
   signInWithCredential
 } from "firebase/auth"
+import { collection, doc, setDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+
 import { auth } from "./config"
-import { useNavigate } from 'react-router-dom';
-import { collection, setDoc, doc } from "firebase/firestore"; 
-import { db } from "./config";
+import { db } from "./config"
 
 export interface ILoginPageProps {}
 
 const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<User>(null)
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const onLogoutClicked = async () => {
     if (user) {
@@ -34,32 +35,29 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
         const credential = GoogleAuthProvider.credential(null, token)
         try {
           await signInWithCredential(auth, credential)
-        } catch (e) {
-          
-        }
+        } catch (e) {}
       }
     })
   }
 
   useEffect(() => {
-    
     onAuthStateChanged(auth, (user) => {
       setIsLoading(false)
-      if(user) {
+      if (user) {
         setUser(user)
-        setDoc(doc(db, "users", user.uid),{
+        setDoc(doc(db, "users", user.uid), {
           name: user.displayName,
           email: user.email,
           photoUrl: user.photoURL,
           createdAt: new Date()
         })
-        navigate('/')
+        navigate("/")
       }
     })
   }, [setUser, setIsLoading])
 
-    return (
-      <div
+  return (
+    <div
       style={{
         display: "flex",
         flexDirection: "column",
@@ -97,7 +95,7 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
         )}
       </div>
     </div>
-    );
-};
+  )
+}
 
-export default Login;
+export default Login
