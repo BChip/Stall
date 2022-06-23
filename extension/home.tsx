@@ -12,6 +12,7 @@ import {
   Loader,
   LoadingOverlay,
   MantineProvider,
+  Menu,
   Modal,
   Notification,
   Paper,
@@ -42,6 +43,7 @@ import {
 import { useEffect, useState } from "react"
 import {
   Check,
+  DoorExit,
   Flag,
   Message,
   MoonStars,
@@ -209,13 +211,18 @@ function Home() {
           {/* <Button onClick={() => signOut(auth)}>Sign out</Button> */}
           <Container>
             <LoadingOverlay visible={isLoading} />
-            <ActionIcon
-              variant="outline"
-              color={dark ? "yellow" : "blue"}
-              onClick={() => toggleColorScheme()}
-              title="Toggle color schema">
-              {dark ? <Sun size={18} /> : <MoonStars size={18} />}
-            </ActionIcon>
+            <div style={{ position: "absolute", right: 10 }}>
+              <Menu trigger="hover" delay={500}>
+                <Menu.Item
+                  onClick={() => toggleColorScheme()}
+                  icon={dark ? <Sun size={14} /> : <MoonStars size={14} />}>
+                  {dark ? "Turn On Light Mode" : "Turn On Dark Mode"}
+                </Menu.Item>
+                <Menu.Item icon={<DoorExit size={14} />}>
+                  Sign out (not implemented)
+                </Menu.Item>
+              </Menu>
+            </div>
             <Group spacing="xs" mt="xs">
               {userLiked !== null ? (
                 <>
