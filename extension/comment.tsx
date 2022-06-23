@@ -1,4 +1,4 @@
-import { Accordion, ActionIcon, Avatar, Button, Container, Grid, Group, Modal, Notification, Paper, Select, Text, UnstyledButton } from "@mantine/core";
+import { Accordion, ActionIcon, Avatar, Button, Container, Grid, Group, Menu, Modal, Notification, Paper, Select, Text, UnstyledButton } from "@mantine/core";
 import { Check, Flag, Message, ThumbDown, ThumbUp } from "tabler-icons-react";
 import { getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -76,22 +76,30 @@ function Comment({ id, user, comment, createdAt, setReportNotification}){
         <Paper mt="sm" shadow="sm" p="sm" withBorder={true}>
             <Grid columns={48}>
                 <Grid.Col span={5}>
-                    {userData.photoUrl ? <Avatar src={userData.photoUrl } radius="xl" mt="xs"></Avatar> : <Avatar radius="xl"></Avatar>}
+                    {userData.photoUrl ? <Avatar size="md" src={userData.photoUrl } radius="xl" mt="xs"></Avatar> : <Avatar size="md" radius="xl" mt="xs"></Avatar>}
                 </Grid.Col>
                 <Grid.Col span={43}>
-                    <Text size="xs" color="dimmed">{userData.name}</Text>
-                    <Text>{comment}</Text>
+                    <Grid>
+                        <Grid.Col span={10}>
+                            <Text size="xs" mt="xs" color="dimmed">{userData.name} - {moment(createdAt).fromNow()}</Text>
+                        </Grid.Col>
+                        <Grid.Col span={2}>
+                            <Menu ml="md" size="xs">
+                                <Menu.Item icon={<Flag size={12} color={"orange"}  />} onClick={() => setOpened(true)}>Report</Menu.Item>
+                            </Menu>
+                        </Grid.Col>
+                    </Grid>
+                    <Text size="sm">{comment}</Text>
                 </Grid.Col>
             </Grid>
-            <Text mt="xs" size="xs" color="dimmed">{moment(createdAt).fromNow()}</Text>
-            <Group spacing="xs" mt="xs">
-            {/*<Button variant="outline" size="xs" leftIcon={<Message size={18}/>}>Reply</Button>*/}
+            {/*<Group spacing="xs" mt="xs">
+            <Button variant="outline" size="xs" leftIcon={<Message size={18}/>}>Reply</Button>*/}
                 {/* <ActionIcon><ThumbUp size={18} color={"green"} /></ActionIcon>
                 <Text>{likes}</Text>
                 <ActionIcon><ThumbDown size={18} color={"red"} /></ActionIcon>
-                <Text>{dislikes}</Text> */}
-                <ActionIcon onClick={() => setOpened(true)}><Flag size={18} color={"orange"} /></ActionIcon>
-            </Group>
+                <Text>{dislikes}</Text> 
+                
+            </Group>*/}
             {/*
             <Accordion>
                 {replies.length !== 0 ? 
