@@ -22,23 +22,13 @@ function Home() {
   const [likes, setLikes] = useState(0);
   const [userLiked, setUserLiked] = useState(null);
   const [dislikes, setDislikes] = useState(0);
-  const [opened, setOpened] = useState(false)
-  const [reportNotification, setReportNotification] = useState(true)
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
+  const [reportNotification, setReportNotification] = useState(true)
   const toggleColorScheme = (value?: ColorScheme) => {
     setColorScheme(value || (colorScheme === "light" ? "dark" : "light"))
   }
   
-  const report = () => {
-    setOpened(false)
-    setReportNotification(false)
-    // setReportNotification(false) after 5 seconds
-    setTimeout(() => {
-      setReportNotification(true)
-    }, 5000)
-  }
-
   const fetchSiteFeelings = async (user, siteRef) => {
     const siteFeelings = collection(db, "siteFeelings");
     const siteFeelingsQuery = query(siteFeelings, where("url", "==", siteRef));
@@ -50,7 +40,6 @@ function Home() {
       const userLiked = siteFeelings.find(siteFeeling => siteFeeling.user.id === user.uid)
       setLikes(likes)
       setDislikes(dislikes)
-      console.log(userLiked)
       if(userLiked){
         setUserLiked(userLiked.like)
       }else{
@@ -66,7 +55,7 @@ function Home() {
     const commentsQuery = query(commentsRef, where("url", "==", siteRef), orderBy(sort, "desc"));
     try{
       const querySnapshot = await getDocs(commentsQuery);
-      const comments = querySnapshot.docs.map(doc => doc.data())
+      const comments = querySnapshot.docs.map(doc =>  ({...doc.data(), id: doc.id}))
       setComments(comments);
     }catch(error){console.log(error)}
   }
@@ -148,31 +137,7 @@ function Home() {
 
   return (
     <div style={{minWidth: "500px"}}>
-    <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title="Report Comment"
-        >
-        <Container>
-          <Select
-            label="Reason"
-            placeholder="Pick one"
-            required
-            allowDeselect
-            data={[
-              { value: 'commercial', label: 'Unwanted commericial content or spam' },
-              { value: 'sexual', label: 'Pornography or sexually explicit material' },
-              { value: 'abuse', label: 'Child abuse' },
-              { value: 'hate', label: 'Hate speech or graphic violence' },
-              { value: 'terrorism', label: "Promotes terrorism"},
-              { value: 'harrassment', label: "Harassment or bullying"},
-              { value: 'suicide', label: "Suicide or self injury"},
-              { value: 'misinformation', label: "Misinformation"}
-            ]}
-          />
-          <Button onClick={() => report()} mt="sm" color={"red"}>Report</Button>
-        </Container>
-      </Modal>
+    
       
     <ColorSchemeProvider colorScheme={colorScheme} toggleColorScheme={toggleColorScheme}>
     <MantineProvider theme={{ colorScheme }} withNormalizeCSS withGlobalStyles>
@@ -225,7 +190,7 @@ function Home() {
       
       <ScrollArea style={{ height: 250 }}>
         {comments.map((comment, i) => (
-          <Comment key={i} id={i} user={comment.author} comment={comment.text} createdAt={comment.createdAt.toDate().toISOString()}/>
+          <Comment key={i} id={comment.id} user={comment.author} comment={comment.text} createdAt={comment.createdAt.toDate().toISOString()} setReportNotification={setReportNotification}/>
         ))}
       
       </ScrollArea>
@@ -233,12 +198,12 @@ function Home() {
       }
       
     </Container>
-    <Notification hidden={reportNotification} icon={<Check size={18} />} color="teal" title="Thank you for reporting this comment.">
-        We will review it and take appropriate action.
-        </Notification>
+    
     </MantineProvider>
     </ColorSchemeProvider>
-    
+    <Notification hidden={reportNotification} icon={<Check size={18} />} color="teal" title="Thank you for reporting this comment.">
+        We will review it and take appropriate action.
+    </Notification>
     </div>
   )
 }
