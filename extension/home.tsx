@@ -25,6 +25,7 @@ function Home() {
   const [opened, setOpened] = useState(false)
   const [reportNotification, setReportNotification] = useState(true)
   const dark = colorScheme === "dark"
+  const [commentSort, setCommentSort] = useState("createdAt")
   const toggleColorScheme = (value?: ColorScheme) => {
     setColorScheme(value || (colorScheme === "light" ? "dark" : "light"))
   }
@@ -60,14 +61,13 @@ function Home() {
 
   }
 
-  const fetchComments = async (siteRef) => {
+  const fetchComments = async (siteRef, sort) => {
     const commentsRef = collection(db, "comments");
-    const commentsQuery = query(commentsRef, where("url", "==", siteRef), orderBy("createdAt", "desc"));
+    const commentsQuery = query(commentsRef, where("url", "==", siteRef), orderBy(sort, "desc"));
     try{
       const querySnapshot = await getDocs(commentsQuery);
       const comments = querySnapshot.docs.map(doc => doc.data())
       setComments(comments);
-
     }catch(error){console.log(error)}
   }
 
@@ -96,7 +96,7 @@ function Home() {
               fetchSiteFeelings(user, siteRef).catch(err => {
                 setError(err)
               })
-              fetchComments(siteRef).catch(err => {
+              fetchComments(siteRef, commentSort).catch(err => {
                 setError(err)
               })
               setIsLoading(false);
@@ -118,7 +118,7 @@ function Home() {
         createdAt: serverTimestamp(),
       });
       setComment("");
-      fetchComments(siteRef).catch(err => {
+      fetchComments(siteRef, commentSort).catch(err => {
         setError(err)
       })
     } catch (e) {
@@ -138,6 +138,12 @@ function Home() {
     }
     )
   }
+
+  const setSort = (value) => {
+    setCommentSort(value)
+    fetchComments(siteRef, value);
+  }
+  
   
 
   return (
@@ -202,7 +208,21 @@ function Home() {
       <Divider mt="sm" mb="sm"/>
       {isLoading ? <Loader /> : 
       <>
-      <Text>Comments:</Text>
+      <Grid>
+        <Grid.Col span={3}>
+          <Text mt="xs">Comments:</Text>
+        </Grid.Col>
+        <Grid.Col offset={4} span={5}>
+        <Select
+          value={commentSort} onChange={(value) => setSort(value)}
+          data={[
+            { value: 'createdAt', label: 'Created At' },
+            { value: 'text', label: 'Alphabetical' },
+          ]}
+        />
+        </Grid.Col>
+      </Grid>
+      
       <ScrollArea style={{ height: 250 }}>
         {comments.map((comment, i) => (
           <Comment key={i} id={i} user={comment.author} comment={comment.text} createdAt={comment.createdAt.toDate().toISOString()}/>
