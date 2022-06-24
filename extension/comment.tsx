@@ -1,26 +1,23 @@
 import {
-  Accordion,
-  ActionIcon,
   Avatar,
   Button,
   Container,
   Grid,
-  Group,
   Menu,
   Modal,
-  Notification,
   Paper,
   Select,
-  Text,
-  UnstyledButton
+  Text
 } from "@mantine/core"
 import { getDoc } from "firebase/firestore"
 import { doc, setDoc } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
-import { Check, Flag, Message, ThumbDown, ThumbUp } from "tabler-icons-react"
+import { Flag } from "tabler-icons-react"
 
 import { db } from "~config"
+
+import { createCommentReport } from "./firebase"
 
 function Comment({ id, user, comment, createdAt, setReportNotification }) {
   const [userData, setUserData] = useState({})
@@ -32,13 +29,7 @@ function Comment({ id, user, comment, createdAt, setReportNotification }) {
   const report = () => {
     setOpened(false)
     setReportNotification(false)
-    const userRef = doc(db, `users/${user.id}`)
-    const commentRef = doc(db, `comments/${id}`)
-    setDoc(doc(db, "commentReports", userRef.id + commentRef.id), {
-      reportReason,
-      comment: commentRef,
-      reportedBy: userRef
-    })
+    createCommentReport(reportReason, user, id)
     setTimeout(() => {
       setReportNotification(true)
     }, 5000)
