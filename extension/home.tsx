@@ -1,7 +1,5 @@
 import {
-  Accordion,
   ActionIcon,
-  Avatar,
   Button,
   ColorScheme,
   ColorSchemeProvider,
@@ -9,43 +7,21 @@ import {
   Divider,
   Grid,
   Group,
-  Loader,
   LoadingOverlay,
   MantineProvider,
   Menu,
-  Modal,
   Notification,
-  Paper,
   ScrollArea,
   Select,
   Text,
   Textarea
 } from "@mantine/core"
-import { useLocalStorageValue } from "@mantine/hooks"
-import {
-  createUserWithEmailAndPassword,
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "firebase/auth"
-import {
-  DocumentReference,
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  where
-} from "firebase/firestore"
+import { onAuthStateChanged } from "firebase/auth"
+import { doc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import {
   Check,
   DoorExit,
-  Flag,
-  Message,
   MoonStars,
   Sun,
   ThumbDown,
@@ -56,15 +32,17 @@ import abbreviate from "~abbreviate"
 import Comment from "~comment"
 
 import { auth, db } from "./config"
+import {
+  createComment,
+  createSite,
+  createSiteFeeling,
+  getComments,
+  getSiteFeelings
+} from "./firebase"
 
 function Home() {
-  //generate random number between 1000 and 10000000
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState(null)
-  const randomNum: string = abbreviate(
-    Math.floor(Math.random() * (10000000 - 1000 + 1)) + 1000,
-    0
-  )
   const [colorScheme, setColorScheme] = useState<ColorScheme>("light")
   const [error, setError] = useState("")
   const [siteRef, setSiteRef] = useState({})
@@ -76,60 +54,31 @@ function Home() {
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
   const [reportNotification, setReportNotification] = useState(true)
+
   const toggleColorScheme = (value?: ColorScheme) => {
     setColorScheme(value || (colorScheme === "light" ? "dark" : "light"))
   }
 
   const fetchSiteFeelings = async (user, siteRef) => {
-    const siteFeelings = collection(db, "siteFeelings")
-    const siteFeelingsQuery = query(siteFeelings, where("url", "==", siteRef))
-    try {
-      const querySnapshot = await getDocs(siteFeelingsQuery)
-      const siteFeelings = querySnapshot.docs.map((doc) => doc.data())
-      const likes = siteFeelings.filter(
-        (siteFeeling) => siteFeeling.like
-      ).length
-      const dislikes = siteFeelings.filter(
-        (siteFeeling) => !siteFeeling.like
-      ).length
-      const userLiked = siteFeelings.find(
-        (siteFeeling) => siteFeeling.user.id === user.uid
-      )
-      setLikes(likes)
-      setDislikes(dislikes)
-      if (userLiked) {
-        setUserLiked(userLiked.like)
-      } else {
-        setUserLiked(null)
-      }
-    } catch (error) {
-      console.log(error)
+    const siteFeelings = await getSiteFeelings(siteRef)
+    const likes = siteFeelings.filter((siteFeeling) => siteFeeling.like).length
+    const dislikes = siteFeelings.filter(
+      (siteFeeling) => !siteFeeling.like
+    ).length
+    const userLiked = siteFeelings.find(
+      (siteFeeling) => siteFeeling.user.id === user.uid
+    )
+    setLikes(likes)
+    setDislikes(dislikes)
+    if (userLiked) {
+      setUserLiked(userLiked.like)
+    } else {
+      setUserLiked(null)
     }
   }
 
   const fetchComments = async (siteRef, sort) => {
-    const commentsRef = collection(db, "comments")
-    const commentsQuery = query(
-      commentsRef,
-      where("url", "==", siteRef),
-      orderBy(sort, "desc")
-    )
-    try {
-      const querySnapshot = await getDocs(commentsQuery)
-      const comments = querySnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id
-      }))
-      setComments(comments)
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-  const createSite = async (tabUrl, b64Url) => {
-    setDoc(doc(db, "sites", b64Url), {
-      url: tabUrl
-    })
+    setComments(await getComments(siteRef, sort))
   }
 
   const getCurrentTab = async () => {
@@ -165,30 +114,16 @@ function Home() {
     return () => AuthCheck()
   }, [auth])
 
-  const createComment = async () => {
-    try {
-      const docRef = await addDoc(collection(db, "comments"), {
-        text: comment,
-        author: doc(db, `users/${user.uid}`),
-        url: siteRef,
-        createdAt: serverTimestamp()
-      })
-      setComment("")
-      fetchComments(siteRef, commentSort).catch((err) => {
-        setError(err)
-      })
-    } catch (e) {
-      console.error("Error adding document: ", e)
-    }
+  const submitComment = async () => {
+    await createComment(comment, user, siteRef)
+    setComment("")
+    fetchComments(siteRef, commentSort).catch((err) => {
+      setError(err)
+    })
   }
 
   const vote = async (feeling) => {
-    const userRef = doc(db, `users/${user.uid}`)
-    await setDoc(doc(db, "siteFeelings", userRef.id + siteRef.id), {
-      url: siteRef,
-      user: userRef,
-      like: feeling
-    })
+    await createSiteFeeling(feeling, user, siteRef)
     fetchSiteFeelings(user, siteRef).catch((err) => {
       setError(err)
     })
@@ -238,7 +173,7 @@ function Home() {
                       <ThumbUp size={18} color={"green"} />
                     )}
                   </ActionIcon>
-                  <Text>{likes}</Text>
+                  <Text>{abbreviate(likes, 0)}</Text>
                   <ActionIcon onClick={() => vote(false)}>
                     {userLiked ? (
                       <ThumbDown size={18} color={"red"} />
@@ -251,7 +186,7 @@ function Home() {
                       />
                     )}
                   </ActionIcon>
-                  <Text>{dislikes}</Text>
+                  <Text>{abbreviate(dislikes, 0)}</Text>
                 </>
               ) : (
                 <>
@@ -279,7 +214,7 @@ function Home() {
                 required
                 style={{ width: "350px" }}
               />
-              <Button onClick={() => createComment()}>Submit</Button>
+              <Button onClick={() => submitComment()}>Submit</Button>
             </Group>
             <Text size="xs" color="dimmed">
               {comment.length} / 140
@@ -303,9 +238,9 @@ function Home() {
               </Grid>
 
               <ScrollArea style={{ height: 250 }}>
-                {comments.map((comment, i) => (
+                {comments.map((comment) => (
                   <Comment
-                    key={i}
+                    key={comment.id}
                     id={comment.id}
                     user={comment.author}
                     comment={comment.text}
