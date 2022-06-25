@@ -1,3 +1,5 @@
+import { storage } from "@extend-chrome/storage"
+import { getBucket } from "@extend-chrome/storage"
 import {
   ActionIcon,
   Button,
@@ -40,10 +42,16 @@ import {
   getSiteFeelings
 } from "./firebase"
 
+interface UserSettings {
+  colorScheme: string
+}
+
+const userSettings = getBucket<UserSettings>("userSettings")
+
 function Home() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState(null)
-  const [colorScheme, setColorScheme] = useState<ColorScheme>("light")
+  const [colorScheme, setColorScheme] = useState<ColorScheme>(null)
   const [error, setError] = useState("")
   const [siteRef, setSiteRef] = useState({})
   const [comment, setComment] = useState("")
@@ -56,7 +64,9 @@ function Home() {
   const [reportNotification, setReportNotification] = useState(true)
 
   const toggleColorScheme = (value?: ColorScheme) => {
-    setColorScheme(value || (colorScheme === "light" ? "dark" : "light"))
+    const color = colorScheme === "light" ? "dark" : "light"
+    userSettings.set({ colorScheme: value || color })
+    setColorScheme(value || color)
   }
 
   const fetchSiteFeelings = async (user, siteRef) => {
@@ -87,8 +97,13 @@ function Home() {
     return tabs[0].url
   }
 
+  const getColorScheme = async () => {
+    const settings = await userSettings.get()
+    setColorScheme(settings.colorScheme)
+  }
+
   useEffect(() => {
-    setIsLoading(true)
+    getColorScheme()
     const AuthCheck = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUser(user)
@@ -136,130 +151,136 @@ function Home() {
 
   return (
     <div style={{ minWidth: "500px" }}>
-      <ColorSchemeProvider
-        colorScheme={colorScheme}
-        toggleColorScheme={toggleColorScheme}>
-        <MantineProvider
-          theme={{ colorScheme }}
-          withNormalizeCSS
-          withGlobalStyles>
-          {/* <Button onClick={() => signOut(auth)}>Sign out</Button> */}
-          <Container>
-            <LoadingOverlay visible={isLoading} />
-            <div style={{ position: "absolute", right: 10 }}>
-              <Menu trigger="hover" delay={500}>
-                <Menu.Item
-                  onClick={() => toggleColorScheme()}
-                  icon={dark ? <Sun size={14} /> : <MoonStars size={14} />}>
-                  {dark ? "Turn On Light Mode" : "Turn On Dark Mode"}
-                </Menu.Item>
-                <Menu.Item icon={<DoorExit size={14} />}>
-                  Sign out (not implemented)
-                </Menu.Item>
-              </Menu>
-            </div>
-            <Group spacing="xs" mt="xs">
-              {userLiked !== null ? (
-                <>
-                  <ActionIcon onClick={() => vote(true)}>
-                    {userLiked ? (
-                      <ThumbUp
-                        size={18}
-                        fill={"green"}
-                        fillOpacity={0.3}
-                        color={"green"}
-                      />
-                    ) : (
-                      <ThumbUp size={18} color={"green"} />
-                    )}
-                  </ActionIcon>
-                  <Text>{abbreviate(likes, 0)}</Text>
-                  <ActionIcon onClick={() => vote(false)}>
-                    {userLiked ? (
-                      <ThumbDown size={18} color={"red"} />
-                    ) : (
-                      <ThumbDown
-                        size={18}
-                        fill={"red"}
-                        fillOpacity={0.3}
-                        color={"red"}
-                      />
-                    )}
-                  </ActionIcon>
-                  <Text>{abbreviate(dislikes, 0)}</Text>
-                </>
-              ) : (
-                <>
-                  <ActionIcon onClick={() => vote(true)}>
-                    <ThumbUp size={18} color={"green"} />
-                  </ActionIcon>
-                  <Text>{likes}</Text>
-                  <ActionIcon onClick={() => vote(false)}>
-                    <ThumbDown size={18} color={"red"} />
-                  </ActionIcon>
-                  <Text>{dislikes}</Text>
-                </>
-              )}
-            </Group>
+      {colorScheme === null ? (
+        <></>
+      ) : (
+        <>
+          <LoadingOverlay visible={isLoading} overlayOpacity={0} />
+          <ColorSchemeProvider
+            colorScheme={colorScheme}
+            toggleColorScheme={toggleColorScheme}>
+            <MantineProvider
+              theme={{ colorScheme }}
+              withNormalizeCSS
+              withGlobalStyles>
+              {/* <Button onClick={() => signOut(auth)}>Sign out</Button> */}
+              <Container>
+                <div style={{ position: "absolute", right: 10 }}>
+                  <Menu trigger="hover" delay={500}>
+                    <Menu.Item
+                      onClick={() => toggleColorScheme()}
+                      icon={dark ? <Sun size={14} /> : <MoonStars size={14} />}>
+                      {dark ? "Turn On Light Mode" : "Turn On Dark Mode"}
+                    </Menu.Item>
+                    <Menu.Item icon={<DoorExit size={14} />}>
+                      Sign out (not implemented)
+                    </Menu.Item>
+                  </Menu>
+                </div>
+                <Group spacing="xs" mt="xs">
+                  {userLiked !== null ? (
+                    <>
+                      <ActionIcon onClick={() => vote(true)}>
+                        {userLiked ? (
+                          <ThumbUp
+                            size={18}
+                            fill={"green"}
+                            fillOpacity={0.3}
+                            color={"green"}
+                          />
+                        ) : (
+                          <ThumbUp size={18} color={"green"} />
+                        )}
+                      </ActionIcon>
+                      <Text>{abbreviate(likes, 0)}</Text>
+                      <ActionIcon onClick={() => vote(false)}>
+                        {userLiked ? (
+                          <ThumbDown size={18} color={"red"} />
+                        ) : (
+                          <ThumbDown
+                            size={18}
+                            fill={"red"}
+                            fillOpacity={0.3}
+                            color={"red"}
+                          />
+                        )}
+                      </ActionIcon>
+                      <Text>{abbreviate(dislikes, 0)}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <ActionIcon onClick={() => vote(true)}>
+                        <ThumbUp size={18} color={"green"} />
+                      </ActionIcon>
+                      <Text>{likes}</Text>
+                      <ActionIcon onClick={() => vote(false)}>
+                        <ThumbDown size={18} color={"red"} />
+                      </ActionIcon>
+                      <Text>{dislikes}</Text>
+                    </>
+                  )}
+                </Group>
 
-            <Divider mt="sm" />
-            <Group mt="sm">
-              <Textarea
-                autosize
-                value={comment}
-                maxLength={140}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Your comment"
-                error={error}
-                required
-                style={{ width: "350px" }}
-              />
-              <Button onClick={() => submitComment()}>Submit</Button>
-            </Group>
-            <Text size="xs" color="dimmed">
-              {comment.length} / 140
-            </Text>
-            <Divider mt="sm" mb="sm" />
-            <>
-              <Grid>
-                <Grid.Col span={3}>
-                  <Text mt="xs">Comments:</Text>
-                </Grid.Col>
-                <Grid.Col offset={4} span={5}>
-                  <Select
-                    value={commentSort}
-                    onChange={(value) => setSort(value)}
-                    data={[
-                      { value: "createdAt", label: "Created At" },
-                      { value: "text", label: "Alphabetical" }
-                    ]}
+                <Divider mt="sm" />
+                <Group mt="sm">
+                  <Textarea
+                    autosize
+                    value={comment}
+                    maxLength={140}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Your comment"
+                    error={error}
+                    required
+                    style={{ width: "350px" }}
                   />
-                </Grid.Col>
-              </Grid>
+                  <Button onClick={() => submitComment()}>Submit</Button>
+                </Group>
+                <Text size="xs" color="dimmed">
+                  {comment.length} / 140
+                </Text>
+                <Divider mt="sm" mb="sm" />
+                <>
+                  <Grid>
+                    <Grid.Col span={3}>
+                      <Text mt="xs">Comments:</Text>
+                    </Grid.Col>
+                    <Grid.Col offset={4} span={5}>
+                      <Select
+                        value={commentSort}
+                        onChange={(value) => setSort(value)}
+                        data={[
+                          { value: "createdAt", label: "Created At" },
+                          { value: "text", label: "Alphabetical" }
+                        ]}
+                      />
+                    </Grid.Col>
+                  </Grid>
 
-              <ScrollArea style={{ height: 250 }}>
-                {comments.map((comment) => (
-                  <Comment
-                    key={comment.id}
-                    id={comment.id}
-                    user={comment.author}
-                    comment={comment.text}
-                    createdAt={comment.createdAt.toDate().toISOString()}
-                    setReportNotification={setReportNotification}
-                  />
-                ))}
-              </ScrollArea>
-            </>
-          </Container>
-        </MantineProvider>
-      </ColorSchemeProvider>
-      <Notification
-        hidden={reportNotification}
-        icon={<Check size={18} />}
-        color="teal"
-        title="Thank you for reporting this comment.">
-        We will review it and take appropriate action.
-      </Notification>
+                  <ScrollArea style={{ height: 250 }}>
+                    {comments.map((comment) => (
+                      <Comment
+                        key={comment.id}
+                        id={comment.id}
+                        user={comment.author}
+                        comment={comment.text}
+                        createdAt={comment.createdAt.toDate().toISOString()}
+                        setReportNotification={setReportNotification}
+                      />
+                    ))}
+                  </ScrollArea>
+                </>
+              </Container>
+            </MantineProvider>
+          </ColorSchemeProvider>
+          <Notification
+            hidden={reportNotification}
+            icon={<Check size={18} />}
+            color="teal"
+            title="Thank you for reporting this comment.">
+            We will review it and take appropriate action.
+          </Notification>
+        </>
+      )}
     </div>
   )
 }
