@@ -10,6 +10,7 @@
     "build": "plasmo build"
   },
   "dependencies": {
+    "@extend-chrome/storage": "^1.5.0",
     "@mantine/core": "^4.2.7",
     "@mantine/hooks": "^4.2.7",
     "firebase": "^9.8.2",
@@ -38,7 +39,8 @@
     "permissions": [
       "tabs",
       "identity",
-      "identity.email"
+      "identity.email",
+      "storage"
     ],
     "oauth2": {
       "client_id": "132883317922-71ctr5jnlof41qo0jjbd0e7ga0k60j3o.apps.googleusercontent.com",
