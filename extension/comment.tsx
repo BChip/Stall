@@ -3,21 +3,23 @@ import {
   Button,
   Container,
   Grid,
+  Group,
   Menu,
   Modal,
   Paper,
   Select,
-  Text
+  Text,
+  Textarea
 } from "@mantine/core"
 import { getDoc } from "firebase/firestore"
 import { doc, setDoc } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
-import { Flag, Trash } from "tabler-icons-react"
+import { Flag, Pencil, Trash } from "tabler-icons-react"
 
 import { db } from "~config"
 
-import { createCommentReport, deleteComment } from "./firebase"
+import { createCommentReport, deleteComment, updateComment } from "./firebase"
 
 function Comment({
   id,
@@ -25,13 +27,20 @@ function Comment({
   comment,
   createdAt,
   setReportNotification,
-  removeCommentFromView
+  removeCommentFromView,
+  updatedAt
 }) {
   const [userData, setUserData] = useState({})
 
   const [opened, setOpened] = useState(false)
 
   const [reportReason, setReportReason] = useState("")
+
+  const [commentEdit, setCommentEdit] = useState(false)
+
+  const [updatedCommentText, setUpdatedCommentText] = useState(comment)
+
+  const [updatedTime, setUpdatedTime] = useState(updatedAt)
 
   const report = () => {
     setOpened(false)
@@ -48,6 +57,13 @@ function Comment({
       const userData = docSnap.data()
       return userData
     }
+  }
+
+  const submitUpdatedComment = async () => {
+    setCommentEdit(false)
+    const time = moment().toISOString()
+    setUpdatedTime(time)
+    updateComment(id, updatedCommentText)
   }
 
   const delComment = async () => {
@@ -118,7 +134,10 @@ function Comment({
             <Grid>
               <Grid.Col span={10}>
                 <Text size="xs" mt="xs" color="dimmed">
-                  {userData.name} - {moment(createdAt).fromNow()}
+                  {userData.name} -{" "}
+                  {updatedTime
+                    ? moment(updatedAt).fromNow() + " (edited)"
+                    : moment(createdAt).fromNow()}
                 </Text>
               </Grid.Col>
               <Grid.Col span={2}>
@@ -129,6 +148,11 @@ function Comment({
                     Report
                   </Menu.Item>
                   <Menu.Item
+                    icon={<Pencil size={12} color={"black"} />}
+                    onClick={() => setCommentEdit(true)}>
+                    Edit
+                  </Menu.Item>
+                  <Menu.Item
                     icon={<Trash size={12} color={"red"} />}
                     onClick={() => delComment()}>
                     Delete
@@ -136,7 +160,21 @@ function Comment({
                 </Menu>
               </Grid.Col>
             </Grid>
-            <Text size="sm">{comment}</Text>
+            {commentEdit ? (
+              <Group mt="sm">
+                <Textarea
+                  autosize
+                  value={updatedCommentText}
+                  maxLength={140}
+                  onChange={(e) => setUpdatedCommentText(e.target.value)}
+                  required
+                  style={{ width: "350px" }}
+                />
+                <Button onClick={() => submitUpdatedComment()}>Submit</Button>
+              </Group>
+            ) : (
+              <Text size="sm">{updatedCommentText}</Text>
+            )}
           </Grid.Col>
         </Grid>
         {/*<Group spacing="xs" mt="xs">
