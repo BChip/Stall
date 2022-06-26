@@ -272,6 +272,7 @@ function Home() {
                         createdAt={comment.createdAt.toDate().toISOString()}
                         setReportNotification={setReportNotification}
                         removeCommentFromView={removeCommentFromView}
+                        updatedAt={comment.updatedAt?.toDate().toISOString()}
                       />
                     ))}
                   </ScrollArea>

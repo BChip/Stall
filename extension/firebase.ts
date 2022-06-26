@@ -7,6 +7,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where
 } from "firebase/firestore"
 
@@ -69,6 +70,17 @@ export async function deleteComment(commentId) {
     })
   } catch (e) {
     console.error("Error deleting document: ", e)
+  }
+}
+
+export async function updateComment(commentId, comment) {
+  try {
+    await updateDoc(doc(db, "comments", commentId), {
+      text: comment,
+      updatedAt: serverTimestamp()
+    })
+  } catch (e) {
+    console.error("Error updating document: ", e)
   }
 }
 
