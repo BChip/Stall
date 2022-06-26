@@ -13,13 +13,20 @@ import { getDoc } from "firebase/firestore"
 import { doc, setDoc } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
-import { Flag } from "tabler-icons-react"
+import { Flag, Trash } from "tabler-icons-react"
 
 import { db } from "~config"
 
-import { createCommentReport } from "./firebase"
+import { createCommentReport, deleteComment } from "./firebase"
 
-function Comment({ id, user, comment, createdAt, setReportNotification }) {
+function Comment({
+  id,
+  user,
+  comment,
+  createdAt,
+  setReportNotification,
+  removeCommentFromView
+}) {
   const [userData, setUserData] = useState({})
 
   const [opened, setOpened] = useState(false)
@@ -41,6 +48,11 @@ function Comment({ id, user, comment, createdAt, setReportNotification }) {
       const userData = docSnap.data()
       return userData
     }
+  }
+
+  const delComment = async () => {
+    await deleteComment(id)
+    removeCommentFromView(id)
   }
 
   useEffect(() => {
@@ -115,6 +127,11 @@ function Comment({ id, user, comment, createdAt, setReportNotification }) {
                     icon={<Flag size={12} color={"orange"} />}
                     onClick={() => setOpened(true)}>
                     Report
+                  </Menu.Item>
+                  <Menu.Item
+                    icon={<Trash size={12} color={"red"} />}
+                    onClick={() => delComment()}>
+                    Delete
                   </Menu.Item>
                 </Menu>
               </Grid.Col>

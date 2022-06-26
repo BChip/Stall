@@ -28,6 +28,7 @@ export async function getComments(siteRef, sort) {
   const commentsQuery = query(
     commentsRef,
     where("url", "==", siteRef),
+    where("hidden", "==", false),
     orderBy(sort, "desc")
   )
   try {
@@ -53,10 +54,21 @@ export async function createComment(comment, user, siteRef) {
       text: comment,
       author: doc(db, `users/${user.uid}`),
       url: siteRef,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      hidden: false
     })
   } catch (e) {
     console.error("Error adding document: ", e)
+  }
+}
+
+export async function deleteComment(commentId) {
+  try {
+    await setDoc(doc(db, "comments", commentId), {
+      hidden: true
+    })
+  } catch (e) {
+    console.error("Error deleting document: ", e)
   }
 }
 

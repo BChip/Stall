@@ -137,6 +137,12 @@ function Home() {
     })
   }
 
+  const removeCommentFromView = (commentId) => {
+    //remove commment from comments array
+    const newComments = comments.filter((comment) => comment.id !== commentId)
+    setComments(newComments)
+  }
+
   const vote = async (feeling) => {
     await createSiteFeeling(feeling, user, siteRef)
     fetchSiteFeelings(user, siteRef).catch((err) => {
@@ -265,6 +271,7 @@ function Home() {
                         comment={comment.text}
                         createdAt={comment.createdAt.toDate().toISOString()}
                         setReportNotification={setReportNotification}
+                        removeCommentFromView={removeCommentFromView}
                       />
                     ))}
                   </ScrollArea>
