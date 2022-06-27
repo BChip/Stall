@@ -18,6 +18,7 @@ import {
   Text,
   Textarea
 } from "@mantine/core"
+import Filter from "bad-words"
 import { onAuthStateChanged } from "firebase/auth"
 import { doc } from "firebase/firestore"
 import { useEffect, useState } from "react"
@@ -45,6 +46,8 @@ import {
 interface UserSettings {
   colorScheme: string
 }
+
+let filter = new Filter()
 
 const userSettings = getBucket<UserSettings>("userSettings")
 
@@ -130,7 +133,18 @@ function Home() {
   }, [auth])
 
   const submitComment = async () => {
-    await createComment(comment, user, siteRef)
+    // set error if commment contains URL regex
+    if (
+      comment.match(
+        /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+      )
+    ) {
+      setError("Please don't use Domains or URLs in comments.")
+      return
+    }
+    // filter swear words
+    const filteredComment = filter.clean(comment)
+    await createComment(filteredComment, user, siteRef)
     setComment("")
     fetchComments(siteRef, commentSort).catch((err) => {
       setError(err)
@@ -228,19 +242,22 @@ function Home() {
                 </Group>
 
                 <Divider mt="sm" />
-                <Group mt="sm">
-                  <Textarea
-                    autosize
-                    value={comment}
-                    maxLength={140}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Your comment"
-                    error={error}
-                    required
-                    style={{ width: "350px" }}
-                  />
-                  <Button onClick={() => submitComment()}>Submit</Button>
-                </Group>
+                <Grid mt="sm">
+                  <Grid.Col span={9}>
+                    <Textarea
+                      autosize
+                      value={comment}
+                      maxLength={140}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Your comment"
+                      error={error}
+                      required
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={3}>
+                    <Button onClick={() => submitComment()}>Submit</Button>
+                  </Grid.Col>
+                </Grid>
                 <Text size="xs" color="dimmed">
                   {comment.length} / 140
                 </Text>
