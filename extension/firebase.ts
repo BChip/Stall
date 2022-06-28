@@ -65,7 +65,7 @@ export async function createComment(comment, user, siteRef) {
 
 export async function deleteComment(commentId) {
   try {
-    await setDoc(doc(db, "comments", commentId), {
+    await updateDoc(doc(db, "comments", commentId), {
       hidden: true
     })
   } catch (e) {
