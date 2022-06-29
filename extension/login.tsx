@@ -49,7 +49,8 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
           name: user.displayName,
           email: user.email,
           photoUrl: user.photoURL,
-          createdAt: new Date()
+          createdAt: new Date(),
+          user: user.uid
         })
         navigate("/")
       }

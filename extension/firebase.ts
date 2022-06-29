@@ -13,9 +13,9 @@ import {
 
 import { db } from "./config"
 
-export async function getSiteFeelings(siteRef) {
+export async function getSiteFeelings(b64Url) {
   const siteFeelings = collection(db, "siteFeelings")
-  const siteFeelingsQuery = query(siteFeelings, where("url", "==", siteRef))
+  const siteFeelingsQuery = query(siteFeelings, where("url", "==", b64Url))
   try {
     const querySnapshot = await getDocs(siteFeelingsQuery)
     return querySnapshot.docs.map((doc) => doc.data())
@@ -24,11 +24,11 @@ export async function getSiteFeelings(siteRef) {
   }
 }
 
-export async function getComments(siteRef, sort) {
+export async function getComments(b64Url, sort) {
   const commentsRef = collection(db, "comments")
   const commentsQuery = query(
     commentsRef,
-    where("url", "==", siteRef),
+    where("url", "==", b64Url),
     where("hidden", "==", false),
     orderBy(sort, "desc")
   )
@@ -43,18 +43,12 @@ export async function getComments(siteRef, sort) {
   }
 }
 
-export async function createSite(tabUrl, b64Url) {
-  await setDoc(doc(db, "sites", b64Url), {
-    url: tabUrl
-  })
-}
-
-export async function createComment(comment, user, siteRef) {
+export async function createComment(comment, user, b64Url) {
   try {
     await addDoc(collection(db, "comments"), {
       text: comment,
-      author: doc(db, `users/${user.uid}`),
-      url: siteRef,
+      user: doc(db, `users/${user.uid}`),
+      url: b64Url,
       createdAt: serverTimestamp(),
       hidden: false
     })
@@ -81,13 +75,14 @@ export async function updateComment(commentId, comment) {
     })
   } catch (e) {
     console.error("Error updating document: ", e)
+    throw e
   }
 }
 
-export async function createSiteFeeling(feeling, user, siteRef) {
+export async function createSiteFeeling(feeling, user, b64Url) {
   const userRef = doc(db, `users/${user.uid}`)
-  await setDoc(doc(db, "siteFeelings", userRef.id + siteRef.id), {
-    url: siteRef,
+  await setDoc(doc(db, "siteFeelings", userRef.id + b64Url), {
+    url: b64Url,
     user: userRef,
     like: feeling
   })
