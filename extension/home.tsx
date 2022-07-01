@@ -37,7 +37,6 @@ import Comment from "~comment"
 import { auth, db } from "./config"
 import {
   createComment,
-  createSite,
   createSiteFeeling,
   getComments,
   getSiteFeelings
@@ -56,11 +55,11 @@ function Home() {
   const [user, setUser] = useState(null)
   const [colorScheme, setColorScheme] = useState<ColorScheme>(null)
   const [error, setError] = useState("")
-  const [siteRef, setSiteRef] = useState({})
   const [comment, setComment] = useState("")
   const [comments, setComments] = useState([])
   const [likes, setLikes] = useState(0)
   const [userLiked, setUserLiked] = useState(null)
+  const [siteB64Url, setSiteB64Url] = useState("")
   const [dislikes, setDislikes] = useState(0)
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
@@ -72,8 +71,8 @@ function Home() {
     setColorScheme(value || color)
   }
 
-  const fetchSiteFeelings = async (user, siteRef) => {
-    const siteFeelings = await getSiteFeelings(siteRef)
+  const fetchSiteFeelings = async (user, site) => {
+    const siteFeelings = await getSiteFeelings(site)
     const likes = siteFeelings.filter((siteFeeling) => siteFeeling.like).length
     const dislikes = siteFeelings.filter(
       (siteFeeling) => !siteFeeling.like
@@ -90,8 +89,8 @@ function Home() {
     }
   }
 
-  const fetchComments = async (siteRef, sort) => {
-    setComments(await getComments(siteRef, sort))
+  const fetchComments = async (site, sort) => {
+    setComments(await getComments(site, sort))
   }
 
   const getCurrentTab = async () => {
@@ -114,13 +113,11 @@ function Home() {
           const b64Url = Buffer.from(tabUrl)
             .toString("base64")
             .replace("/", "_")
-          createSite(tabUrl, b64Url)
-          const siteRef = doc(db, `sites/${b64Url}`)
-          setSiteRef(siteRef)
-          fetchSiteFeelings(user, siteRef).catch((err) => {
+          setSiteB64Url(b64Url)
+          fetchSiteFeelings(user, b64Url).catch((err) => {
             setError(err)
           })
-          fetchComments(siteRef, commentSort).catch((err) => {
+          fetchComments(b64Url, commentSort).catch((err) => {
             setError(err)
           })
           setIsLoading(false)
@@ -144,9 +141,9 @@ function Home() {
     }
     // filter swear words
     const filteredComment = filter.clean(comment)
-    await createComment(filteredComment, user, siteRef)
+    await createComment(filteredComment, user, siteB64Url)
     setComment("")
-    fetchComments(siteRef, commentSort).catch((err) => {
+    fetchComments(siteB64Url, commentSort).catch((err) => {
       setError(err)
     })
   }
@@ -158,15 +155,15 @@ function Home() {
   }
 
   const vote = async (feeling) => {
-    await createSiteFeeling(feeling, user, siteRef)
-    fetchSiteFeelings(user, siteRef).catch((err) => {
+    await createSiteFeeling(feeling, user, siteB64Url)
+    fetchSiteFeelings(user, siteB64Url).catch((err) => {
       setError(err)
     })
   }
 
   const setSort = (value) => {
     setCommentSort(value)
-    fetchComments(siteRef, value)
+    fetchComments(siteB64Url, value)
   }
 
   return (
@@ -284,7 +281,7 @@ function Home() {
                       <Comment
                         key={comment.id}
                         id={comment.id}
-                        user={comment.author}
+                        user={comment.user}
                         comment={comment.text}
                         createdAt={comment.createdAt.toDate().toISOString()}
                         setReportNotification={setReportNotification}

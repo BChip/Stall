@@ -17,7 +17,7 @@ import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
-import { db } from "~config"
+import { auth, db } from "~config"
 
 import { createCommentReport, deleteComment, updateComment } from "./firebase"
 
@@ -60,10 +60,11 @@ function Comment({
   }
 
   const submitUpdatedComment = async () => {
+    updateComment(id, updatedCommentText)
     setCommentEdit(false)
     const time = moment().toISOString()
+    console.log(time, updatedAt)
     setUpdatedTime(time)
-    updateComment(id, updatedCommentText)
   }
 
   const delComment = async () => {
@@ -136,7 +137,7 @@ function Comment({
                 <Text size="xs" mt="xs" color="dimmed">
                   {userData.name} -{" "}
                   {updatedTime
-                    ? moment(updatedAt).fromNow() + " (edited)"
+                    ? moment(updatedTime).fromNow() + " (edited)"
                     : moment(createdAt).fromNow()}
                 </Text>
               </Grid.Col>
@@ -147,16 +148,20 @@ function Comment({
                     onClick={() => setOpened(true)}>
                     Report
                   </Menu.Item>
-                  <Menu.Item
-                    icon={<Pencil size={12} color={"black"} />}
-                    onClick={() => setCommentEdit(true)}>
-                    Edit
-                  </Menu.Item>
-                  <Menu.Item
-                    icon={<Trash size={12} color={"red"} />}
-                    onClick={() => delComment()}>
-                    Delete
-                  </Menu.Item>
+                  {user.id === auth.currentUser.uid ? (
+                    <>
+                      <Menu.Item
+                        icon={<Pencil size={12} color={"black"} />}
+                        onClick={() => setCommentEdit(true)}>
+                        Edit
+                      </Menu.Item>
+                      <Menu.Item
+                        icon={<Trash size={12} color={"red"} />}
+                        onClick={() => delComment()}>
+                        Delete
+                      </Menu.Item>
+                    </>
+                  ) : null}
                 </Menu>
               </Grid.Col>
             </Grid>
