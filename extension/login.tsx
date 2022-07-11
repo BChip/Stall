@@ -1,10 +1,11 @@
+import { Button, LoadingOverlay } from "@mantine/core"
 import {
   GoogleAuthProvider,
   User,
   onAuthStateChanged,
   signInWithCredential
 } from "firebase/auth"
-import { collection, doc, setDoc } from "firebase/firestore"
+import { doc, setDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -64,37 +65,14 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
         flexDirection: "column",
         padding: 16
       }}>
-      <h1>
-        Welcome to your <a href="https://www.plasmo.com">Plasmo</a> Extension!
-      </h1>
-      {!user ? (
-        <button
-          onClick={() => {
-            setIsLoading(true)
-            onLoginClicked()
-          }}>
-          Log in
-        </button>
-      ) : (
-        <button
-          onClick={() => {
-            setIsLoading(true)
-            onLogoutClicked()
-          }}>
-          Log out
-        </button>
-      )}
-      <div>
-        {isLoading ? "Loading..." : ""}
-        {!!user ? (
-          <div>
-            Welcome to Plasmo, {user.displayName} your email address is{" "}
-            {user.email}
-          </div>
-        ) : (
-          ""
-        )}
-      </div>
+      <LoadingOverlay overlayOpacity={1} visible={isLoading} />
+      <Button
+        onClick={() => {
+          setIsLoading(true)
+          onLoginClicked()
+        }}>
+        Log in / Authorize
+      </Button>
     </div>
   )
 }
