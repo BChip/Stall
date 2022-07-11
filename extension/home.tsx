@@ -270,8 +270,10 @@ function Home() {
                       onClick={() => setOpened(true)}>
                       Report an issue
                     </Menu.Item>
-                    <Menu.Item icon={<DoorExit size={14} />}>
-                      Sign out (not implemented)
+                    <Menu.Item
+                      icon={<DoorExit size={14} />}
+                      onClick={() => auth.signOut()}>
+                      Sign out
                     </Menu.Item>
                   </Menu>
                 </div>
