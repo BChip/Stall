@@ -9,9 +9,11 @@ import {
   Divider,
   Grid,
   Group,
+  Input,
   LoadingOverlay,
   MantineProvider,
   Menu,
+  Modal,
   Notification,
   ScrollArea,
   Select,
@@ -23,6 +25,7 @@ import { onAuthStateChanged } from "firebase/auth"
 import { doc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import {
+  AlertCircle,
   Check,
   DoorExit,
   MoonStars,
@@ -64,6 +67,9 @@ function Home() {
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
   const [reportNotification, setReportNotification] = useState(true)
+  const [opened, setOpened] = useState(false)
+  const [titleIssue, setTitleIssue] = useState("")
+  const [bodyIssue, setBodyIssue] = useState("")
 
   const toggleColorScheme = (value?: ColorScheme) => {
     const color = colorScheme === "light" ? "dark" : "light"
@@ -161,13 +167,83 @@ function Home() {
     })
   }
 
+  const openReportNotification = () => {
+    setReportNotification(false)
+    setTimeout(() => {
+      setReportNotification(true)
+    }, 5000)
+  }
+
   const setSort = (value) => {
     setCommentSort(value)
     fetchComments(siteB64Url, value)
   }
 
+  const report = () => {
+    const app = "grafitti"
+    fetch("https://report-bug-midvtuf5pq-uc.a.run.app/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: `{"title":"${titleIssue}","body":"${bodyIssue}","app":"${app}"}`
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(response.statusText)
+        }
+        setOpened(false)
+        openReportNotification()
+        setTitleIssue("")
+        setBodyIssue("")
+      })
+      .catch((err) => {
+        console.error(err)
+      })
+  }
+
   return (
     <div style={{ minWidth: "500px" }}>
+      <>
+        <Modal
+          opened={opened}
+          onClose={() => setOpened(false)}
+          title="Report an Issue">
+          <Container>
+            <Textarea
+              maxLength={100}
+              label="Title"
+              autosize
+              required
+              value={titleIssue}
+              placeholder="Submitting a comment is not working"
+              onChange={(e) => setTitleIssue(e.target.value)}
+            />
+            <Text size="xs" color="dimmed">
+              {titleIssue.length} / 100
+            </Text>
+            <Textarea
+              maxLength={500}
+              autosize
+              required
+              label="Description of Issue"
+              placeholder="I keep getting this error message when I try to submit a comment..."
+              value={bodyIssue}
+              onChange={(e) => setBodyIssue(e.target.value)}
+            />
+            <Text size="xs" color="dimmed">
+              {bodyIssue.length} / 500
+            </Text>
+            <Button
+              disabled={bodyIssue.length === 0 || titleIssue.length === 0}
+              onClick={() => report()}
+              mt="sm"
+              color={"red"}>
+              Report
+            </Button>
+          </Container>
+        </Modal>
+      </>
       {colorScheme === null ? (
         <></>
       ) : (
@@ -188,6 +264,11 @@ function Home() {
                       onClick={() => toggleColorScheme()}
                       icon={dark ? <Sun size={14} /> : <MoonStars size={14} />}>
                       {dark ? "Turn On Light Mode" : "Turn On Dark Mode"}
+                    </Menu.Item>
+                    <Menu.Item
+                      icon={<AlertCircle size={14} />}
+                      onClick={() => setOpened(true)}>
+                      Report an issue
                     </Menu.Item>
                     <Menu.Item icon={<DoorExit size={14} />}>
                       Sign out (not implemented)
@@ -284,7 +365,7 @@ function Home() {
                         user={comment.user}
                         comment={comment.text}
                         createdAt={comment.createdAt.toDate().toISOString()}
-                        setReportNotification={setReportNotification}
+                        setReportNotification={openReportNotification}
                         removeCommentFromView={removeCommentFromView}
                         updatedAt={comment.updatedAt?.toDate().toISOString()}
                       />
@@ -298,7 +379,7 @@ function Home() {
             hidden={reportNotification}
             icon={<Check size={18} />}
             color="teal"
-            title="Thank you for reporting this comment.">
+            title="Thank you!">
             We will review it and take appropriate action.
           </Notification>
         </>
