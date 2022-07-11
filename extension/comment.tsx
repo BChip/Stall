@@ -44,11 +44,8 @@ function Comment({
 
   const report = () => {
     setOpened(false)
-    setReportNotification(false)
     createCommentReport(reportReason, user, id)
-    setTimeout(() => {
-      setReportNotification(true)
-    }, 5000)
+    setReportNotification()
   }
 
   const getUser = async () => {
