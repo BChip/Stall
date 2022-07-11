@@ -287,13 +287,27 @@ function Home() {
                             color={"green"}
                           />
                         ) : (
-                          <ThumbUp size={18} color={"green"} />
+                          <ThumbUp
+                            strokeOpacity={0.3}
+                            size={18}
+                            color={"green"}
+                          />
                         )}
                       </ActionIcon>
-                      <Text>{abbreviate(likes, 0)}</Text>
+                      {userLiked ? (
+                        <Text color={"green"}>{abbreviate(likes, 0)}</Text>
+                      ) : (
+                        <Text>{abbreviate(likes, 0)}</Text>
+                      )}
                       <ActionIcon onClick={() => vote(false)}>
                         {userLiked ? (
-                          <ThumbDown size={18} color={"red"} />
+                          <>
+                            <ThumbDown
+                              strokeOpacity={0.3}
+                              size={18}
+                              color={"red"}
+                            />
+                          </>
                         ) : (
                           <ThumbDown
                             size={18}
@@ -303,16 +317,20 @@ function Home() {
                           />
                         )}
                       </ActionIcon>
-                      <Text>{abbreviate(dislikes, 0)}</Text>
+                      {userLiked ? (
+                        <Text>{abbreviate(dislikes, 0)}</Text>
+                      ) : (
+                        <Text color={"red"}>{abbreviate(dislikes, 0)}</Text>
+                      )}
                     </>
                   ) : (
                     <>
                       <ActionIcon onClick={() => vote(true)}>
-                        <ThumbUp size={18} color={"green"} />
+                        <ThumbUp strokeWidth={2} size={18} color={"green"} />
                       </ActionIcon>
                       <Text>{likes}</Text>
                       <ActionIcon onClick={() => vote(false)}>
-                        <ThumbDown size={18} color={"red"} />
+                        <ThumbDown strokeWidth={2} size={18} color={"red"} />
                       </ActionIcon>
                       <Text>{dislikes}</Text>
                     </>
