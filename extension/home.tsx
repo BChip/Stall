@@ -11,20 +11,16 @@ import {
   LoadingOverlay,
   MantineProvider,
   Menu,
-  Modal,
-  Notification,
   ScrollArea,
   Select,
   Text,
   Textarea
 } from "@mantine/core"
-import { NotificationsProvider, showNotification } from "@mantine/notifications"
-import Filter from "bad-words"
+import { NotificationsProvider } from "@mantine/notifications"
 import { onAuthStateChanged } from "firebase/auth"
 import { useEffect, useState } from "react"
 import {
   AlertCircle,
-  Check,
   DoorExit,
   MoonStars,
   Sun,
@@ -34,7 +30,9 @@ import {
 
 import abbreviate from "~abbreviate"
 import Comment from "~comment"
-import ReportModal from "~reportmodal"
+import { filterComment } from "~filter"
+import ReportIssueModal from "~reportissuemodal"
+import { errorToast } from "~toasts"
 
 import { auth } from "./config"
 import {
@@ -48,26 +46,22 @@ interface UserSettings {
   colorScheme: string
 }
 
-let filter = new Filter()
-
 const userSettings = getBucket<UserSettings>("userSettings")
 
 function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState(null)
   const [colorScheme, setColorScheme] = useState<ColorScheme>(null)
-  const [error, setError] = useState("")
   const [comment, setComment] = useState("")
   const [comments, setComments] = useState([])
   const [likes, setLikes] = useState(0)
   const [userLiked, setUserLiked] = useState(null)
   const [siteB64Url, setSiteB64Url] = useState("")
+  const [commentError, setCommentError] = useState("")
   const [dislikes, setDislikes] = useState(0)
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
   const [opened, setOpened] = useState(false)
-  const [titleIssue, setTitleIssue] = useState("")
-  const [bodyIssue, setBodyIssue] = useState("")
 
   const toggleColorScheme = (value?: ColorScheme) => {
     const color = colorScheme === "light" ? "dark" : "light"
@@ -76,25 +70,42 @@ function Home() {
   }
 
   const fetchSiteFeelings = async (user, site) => {
-    const siteFeelings = await getSiteFeelings(site)
-    const likes = siteFeelings.filter((siteFeeling) => siteFeeling.like).length
-    const dislikes = siteFeelings.filter(
-      (siteFeeling) => !siteFeeling.like
-    ).length
-    const userLiked = siteFeelings.find(
-      (siteFeeling) => siteFeeling.user.id === user.uid
-    )
-    setLikes(likes)
-    setDislikes(dislikes)
-    if (userLiked) {
-      setUserLiked(userLiked.like)
-    } else {
-      setUserLiked(null)
+    let siteFeelings
+    try {
+      siteFeelings = await getSiteFeelings(site)
+    } catch (err) {
+      errorToast("Fetching site likes and dislikes - " + err.message)
+    }
+    if (siteFeelings) {
+      const likes = siteFeelings.filter(
+        (siteFeeling) => siteFeeling.like
+      ).length
+      const dislikes = siteFeelings.filter(
+        (siteFeeling) => !siteFeeling.like
+      ).length
+      const userLiked = siteFeelings.find(
+        (siteFeeling) => siteFeeling.user.id === user.uid
+      )
+      setLikes(likes)
+      setDislikes(dislikes)
+      if (userLiked) {
+        setUserLiked(userLiked.like)
+      } else {
+        setUserLiked(null)
+      }
     }
   }
 
   const fetchComments = async (site, sort) => {
-    setComments(await getComments(site, sort))
+    let comments
+    try {
+      comments = await getComments(site, sort)
+    } catch (err) {
+      errorToast("Fetching comments - " + err.message)
+    }
+    if (comments) {
+      setComments(comments)
+    }
   }
 
   const getCurrentTab = async () => {
@@ -119,10 +130,10 @@ function Home() {
             .replace("/", "_")
           setSiteB64Url(b64Url)
           fetchSiteFeelings(user, b64Url).catch((err) => {
-            setError(err)
+            errorToast(err.message)
           })
           fetchComments(b64Url, commentSort).catch((err) => {
-            setError(err)
+            errorToast(err.message)
           })
           setIsLoading(false)
         })
@@ -134,44 +145,52 @@ function Home() {
   }, [auth])
 
   const submitComment = async () => {
-    // set error if commment contains URL regex
-    if (
-      comment.match(
-        /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
-      )
-    ) {
-      setError("Please don't use Domains or URLs in comments.")
-      return
+    let filteredComment
+    try {
+      filteredComment = filterComment(comment)
+    } catch (error) {
+      errorToast(error.message)
+      setCommentError(error.message)
     }
-    // filter swear words
-    const filteredComment = filter.clean(comment)
-    await createComment(filteredComment, user, siteB64Url)
-    setComment("")
-    fetchComments(siteB64Url, commentSort).catch((err) => {
-      setError(err)
-    })
+    if (filteredComment) {
+      let exception = false
+      try {
+        await createComment(filteredComment, user, siteB64Url)
+      } catch (err) {
+        errorToast("Cannot create comment - " + err.message)
+        setCommentError("Cannot create comment - " + err.message)
+        exception = true
+      } finally {
+        if (!exception) {
+          setComment("")
+          setCommentError("")
+          fetchComments(siteB64Url, commentSort).catch((err) => {
+            errorToast(err.message)
+          })
+        }
+      }
+    }
   }
 
   const removeCommentFromView = (commentId) => {
-    //remove commment from comments array
     const newComments = comments.filter((comment) => comment.id !== commentId)
     setComments(newComments)
   }
 
   const vote = async (feeling) => {
-    await createSiteFeeling(feeling, user, siteB64Url)
-    fetchSiteFeelings(user, siteB64Url).catch((err) => {
-      setError(err)
-    })
-  }
-
-  const openReportNotification = () => {
-    showNotification({
-      title: "Thank you!",
-      color: "teal",
-      icon: <Check />,
-      message: "We will review it and take appropriate action."
-    })
+    let exception = false
+    try {
+      await createSiteFeeling(feeling, user, siteB64Url)
+    } catch (err) {
+      errorToast("Cannot update like/dislike - " + err.message)
+      exception = true
+    } finally {
+      if (!exception) {
+        fetchSiteFeelings(user, siteB64Url).catch((err) => {
+          errorToast(err.message)
+        })
+      }
+    }
   }
 
   const setSort = (value) => {
@@ -182,11 +201,7 @@ function Home() {
   return (
     <div style={{ minWidth: "500px" }}>
       <>
-        <ReportModal
-          opened={opened}
-          setOpened={setOpened}
-          openReportNotification={openReportNotification}
-        />
+        <ReportIssueModal opened={opened} setOpened={setOpened} />
       </>
       {colorScheme === null ? (
         <></>
@@ -200,7 +215,7 @@ function Home() {
               theme={{ colorScheme }}
               withNormalizeCSS
               withGlobalStyles>
-              <NotificationsProvider autoClose={4000}>
+              <NotificationsProvider autoClose={4000} limit={1}>
                 <Container>
                   <div style={{ position: "absolute", right: 10 }}>
                     <Menu delay={500}>
@@ -298,7 +313,7 @@ function Home() {
                         maxLength={140}
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Your comment"
-                        error={error}
+                        error={commentError}
                         required
                       />
                     </Grid.Col>
@@ -339,7 +354,6 @@ function Home() {
                           user={comment.user}
                           comment={comment.text}
                           createdAt={comment.createdAt.toDate().toISOString()}
-                          openReportNotification={openReportNotification}
                           removeCommentFromView={removeCommentFromView}
                           updatedAt={comment.updatedAt?.toDate().toISOString()}
                         />

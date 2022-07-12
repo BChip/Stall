@@ -16,12 +16,8 @@ import { db } from "./config"
 export async function getSiteFeelings(b64Url) {
   const siteFeelings = collection(db, "siteFeelings")
   const siteFeelingsQuery = query(siteFeelings, where("url", "==", b64Url))
-  try {
-    const querySnapshot = await getDocs(siteFeelingsQuery)
-    return querySnapshot.docs.map((doc) => doc.data())
-  } catch (error) {
-    console.log(error)
-  }
+  const querySnapshot = await getDocs(siteFeelingsQuery)
+  return querySnapshot.docs.map((doc) => doc.data())
 }
 
 export async function getComments(b64Url, sort) {
@@ -32,51 +28,34 @@ export async function getComments(b64Url, sort) {
     where("hidden", "==", false),
     orderBy(sort, "desc")
   )
-  try {
-    const querySnapshot = await getDocs(commentsQuery)
-    return querySnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id
-    }))
-  } catch (error) {
-    console.log(error)
-  }
+  const querySnapshot = await getDocs(commentsQuery)
+  return querySnapshot.docs.map((doc) => ({
+    ...doc.data(),
+    id: doc.id
+  }))
 }
 
 export async function createComment(comment, user, b64Url) {
-  try {
-    await addDoc(collection(db, "comments"), {
-      text: comment,
-      user: doc(db, `users/${user.uid}`),
-      url: b64Url,
-      createdAt: serverTimestamp(),
-      hidden: false
-    })
-  } catch (e) {
-    console.error("Error adding document: ", e)
-  }
+  await addDoc(collection(db, "comments"), {
+    text: comment,
+    user: doc(db, `users/${user.uid}`),
+    url: b64Url,
+    createdAt: serverTimestamp(),
+    hidden: false
+  })
 }
 
 export async function deleteComment(commentId) {
-  try {
-    await updateDoc(doc(db, "comments", commentId), {
-      hidden: true
-    })
-  } catch (e) {
-    console.error("Error deleting document: ", e)
-  }
+  await updateDoc(doc(db, "comments", commentId), {
+    hidden: true
+  })
 }
 
 export async function updateComment(commentId, comment) {
-  try {
-    await updateDoc(doc(db, "comments", commentId), {
-      text: comment,
-      updatedAt: serverTimestamp()
-    })
-  } catch (e) {
-    console.error("Error updating document: ", e)
-    throw e
-  }
+  await updateDoc(doc(db, "comments", commentId), {
+    text: comment,
+    updatedAt: serverTimestamp()
+  })
 }
 
 export async function createSiteFeeling(feeling, user, b64Url) {
@@ -94,6 +73,6 @@ export async function createCommentReport(reportReason, user, commentId) {
   await setDoc(doc(db, "commentReports", userRef.id + commentRef.id), {
     reportReason,
     comment: commentRef,
-    reportedBy: userRef
+    user: userRef
   })
 }
