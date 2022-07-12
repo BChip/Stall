@@ -3,6 +3,7 @@ import {
   Button,
   Container,
   Grid,
+  Group,
   Menu,
   Modal,
   Paper,
@@ -16,6 +17,9 @@ import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
 import { auth } from "~config"
+import { filterComment } from "~filter"
+import ReportCommentModal from "~reportcommentModal"
+import { errorToast, reportThankYouToast, successToast } from "~toasts"
 
 import { createCommentReport, deleteComment, updateComment } from "./firebase"
 
@@ -24,7 +28,6 @@ function Comment({
   user,
   comment,
   createdAt,
-  openReportNotification,
   removeCommentFromView,
   updatedAt
 }) {
@@ -32,19 +35,13 @@ function Comment({
 
   const [opened, setOpened] = useState(false)
 
-  const [reportReason, setReportReason] = useState("")
-
   const [commentEdit, setCommentEdit] = useState(false)
 
   const [updatedCommentText, setUpdatedCommentText] = useState(comment)
 
   const [updatedTime, setUpdatedTime] = useState(updatedAt)
 
-  const report = () => {
-    setOpened(false)
-    createCommentReport(reportReason, user, id)
-    openReportNotification()
-  }
+  const [updatedCommentError, setUpdatedCommentError] = useState("")
 
   const getUser = async () => {
     const docSnap = await getDoc(user)
@@ -55,16 +52,34 @@ function Comment({
   }
 
   const submitUpdatedComment = async () => {
-    updateComment(id, updatedCommentText)
-    setCommentEdit(false)
-    const time = moment().toISOString()
-    console.log(time, updatedAt)
-    setUpdatedTime(time)
+    let filteredUpdatedCommentText
+    try {
+      filteredUpdatedCommentText = filterComment(updatedCommentText)
+    } catch (error) {
+      errorToast(error.message)
+      setUpdatedCommentError(error.message)
+    }
+    if (filteredUpdatedCommentText) {
+      try {
+        await updateComment(id, filteredUpdatedCommentText)
+        setCommentEdit(false)
+        setUpdatedCommentError("")
+        const time = moment().toISOString()
+        setUpdatedTime(time)
+      } catch (err) {
+        errorToast("Cannot update comment - " + err.message)
+      }
+    }
   }
 
   const delComment = async () => {
-    await deleteComment(id)
-    removeCommentFromView(id)
+    try {
+      await deleteComment(id)
+      removeCommentFromView(id)
+      successToast("Comment Deleted!")
+    } catch (err) {
+      errorToast("Cannot delete comment - " + err.message)
+    }
   }
 
   useEffect(() => {
@@ -79,40 +94,12 @@ function Comment({
 
   return (
     <>
-      <Modal
+      <ReportCommentModal
         opened={opened}
-        onClose={() => setOpened(false)}
-        title="Report Comment">
-        <Container>
-          <Select
-            label="Reason"
-            placeholder="Pick one"
-            required
-            allowDeselect
-            value={reportReason}
-            onChange={setReportReason}
-            data={[
-              {
-                value: "commercial",
-                label: "Unwanted commericial content or spam"
-              },
-              {
-                value: "sexual",
-                label: "Pornography or sexually explicit material"
-              },
-              { value: "abuse", label: "Child abuse" },
-              { value: "hate", label: "Hate speech or graphic violence" },
-              { value: "terrorism", label: "Promotes terrorism" },
-              { value: "harrassment", label: "Harassment or bullying" },
-              { value: "suicide", label: "Suicide or self injury" },
-              { value: "misinformation", label: "Misinformation" }
-            ]}
-          />
-          <Button onClick={() => report()} mt="sm" color={"red"}>
-            Report
-          </Button>
-        </Container>
-      </Modal>
+        setOpened={setOpened}
+        user={user}
+        comment={id}
+      />
       <Paper mt="sm" shadow="sm" p="sm" withBorder={true}>
         <Grid columns={48}>
           <Grid.Col span={5}>
@@ -138,11 +125,6 @@ function Comment({
               </Grid.Col>
               <Grid.Col span={2}>
                 <Menu ml="md" size="xs">
-                  <Menu.Item
-                    icon={<Flag size={12} color={"orange"} />}
-                    onClick={() => setOpened(true)}>
-                    Report
-                  </Menu.Item>
                   {user.id === auth.currentUser.uid ? (
                     <>
                       <Menu.Item
@@ -156,7 +138,13 @@ function Comment({
                         Delete
                       </Menu.Item>
                     </>
-                  ) : null}
+                  ) : (
+                    <Menu.Item
+                      icon={<Flag size={12} color={"orange"} />}
+                      onClick={() => setOpened(true)}>
+                      Report
+                    </Menu.Item>
+                  )}
                 </Menu>
               </Grid.Col>
             </Grid>
@@ -167,20 +155,30 @@ function Comment({
                   value={updatedCommentText}
                   maxLength={140}
                   onChange={(e) => setUpdatedCommentText(e.target.value)}
+                  error={updatedCommentError}
                   required
                   style={{ width: "350px" }}
                 />
                 <Text size="xs" color="dimmed">
                   {updatedCommentText.length} / 140
                 </Text>
-                <Button
-                  disabled={
-                    updatedCommentText === comment ||
-                    updatedCommentText.length === 0
-                  }
-                  onClick={() => submitUpdatedComment()}>
-                  Submit
-                </Button>
+                <Group>
+                  <Button
+                    size="xs"
+                    disabled={
+                      updatedCommentText === comment ||
+                      updatedCommentText.length === 0
+                    }
+                    onClick={() => submitUpdatedComment()}>
+                    Submit
+                  </Button>
+                  <Button
+                    size="xs"
+                    color="gray"
+                    onClick={() => setCommentEdit(false)}>
+                    Cancel
+                  </Button>
+                </Group>
               </>
             ) : (
               <Text style={{ width: 350, wordWrap: "break-word" }} size="sm">

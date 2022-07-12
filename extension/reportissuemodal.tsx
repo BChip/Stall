@@ -1,32 +1,49 @@
 import { Button, Container, Modal, Text, Textarea } from "@mantine/core"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
-function ReportModal({ opened, setOpened, openReportNotification }) {
+import {
+  errorToast,
+  justASecondToastClose,
+  justASecondToastOpen,
+  reportThankYouToast
+} from "~toasts"
+
+function ReportIssueModal({ opened, setOpened }) {
   const [issueTitle, setIssueTitle] = useState("")
   const [issueDescription, setIssueDescription] = useState("")
 
-  const report = () => {
+  const report = async () => {
+    justASecondToastOpen()
     const app = "grafitti"
-    fetch("https://report-bug-midvtuf5pq-uc.a.run.app/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: `{"title":"${issueTitle}","body":"${issueDescription}","app":"${app}"}`
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(response.statusText)
+    try {
+      const response = await fetch(
+        "https://report-bug-midvtuf5pq-uc.a.run.app/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: `{"title":"${issueTitle}","body":"${issueDescription}","app":"${app}"}`
         }
-        setOpened(false)
-        openReportNotification()
-        setIssueTitle("")
-        setIssueDescription("")
-      })
-      .catch((err) => {
-        setOpened(false)
-        console.log(err)
-      })
+      )
+      const data = await response.text()
+      if (response.ok) {
+        reportOk()
+      } else {
+        throw new Error(data)
+      }
+    } catch (err) {
+      errorToast(err.message)
+    } finally {
+      justASecondToastClose()
+    }
+  }
+
+  const reportOk = () => {
+    reportThankYouToast()
+    setIssueTitle("")
+    setIssueDescription("")
+    setOpened(false)
   }
 
   return (
@@ -73,4 +90,4 @@ function ReportModal({ opened, setOpened, openReportNotification }) {
   )
 }
 
-export default ReportModal
+export default ReportIssueModal
