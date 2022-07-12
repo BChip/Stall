@@ -163,7 +163,7 @@ function Comment({
               </Grid.Col>
             </Grid>
             {commentEdit ? (
-              <Group mt="sm">
+              <>
                 <Textarea
                   autosize
                   value={updatedCommentText}
@@ -172,10 +172,22 @@ function Comment({
                   required
                   style={{ width: "350px" }}
                 />
-                <Button onClick={() => submitUpdatedComment()}>Submit</Button>
-              </Group>
+                <Text size="xs" color="dimmed">
+                  {updatedCommentText.length} / 140
+                </Text>
+                <Button
+                  disabled={
+                    updatedCommentText === comment ||
+                    updatedCommentText.length === 0
+                  }
+                  onClick={() => submitUpdatedComment()}>
+                  Submit
+                </Button>
+              </>
             ) : (
-              <Text size="sm">{updatedCommentText}</Text>
+              <Text style={{ width: 350, wordWrap: "break-word" }} size="sm">
+                {updatedCommentText}
+              </Text>
             )}
           </Grid.Col>
         </Grid>

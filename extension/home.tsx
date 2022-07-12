@@ -1,4 +1,3 @@
-import { storage } from "@extend-chrome/storage"
 import { getBucket } from "@extend-chrome/storage"
 import {
   ActionIcon,
@@ -9,7 +8,6 @@ import {
   Divider,
   Grid,
   Group,
-  Input,
   LoadingOverlay,
   MantineProvider,
   Menu,
@@ -22,7 +20,6 @@ import {
 } from "@mantine/core"
 import Filter from "bad-words"
 import { onAuthStateChanged } from "firebase/auth"
-import { doc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import {
   AlertCircle,
@@ -37,7 +34,7 @@ import {
 import abbreviate from "~abbreviate"
 import Comment from "~comment"
 
-import { auth, db } from "./config"
+import { auth } from "./config"
 import {
   createComment,
   createSiteFeeling,
@@ -259,7 +256,7 @@ function Home() {
               {/* <Button onClick={() => signOut(auth)}>Sign out</Button> */}
               <Container>
                 <div style={{ position: "absolute", right: 10 }}>
-                  <Menu trigger="hover" delay={500}>
+                  <Menu delay={500}>
                     <Menu.Item
                       onClick={() => toggleColorScheme()}
                       icon={dark ? <Sun size={14} /> : <MoonStars size={14} />}>
@@ -280,7 +277,9 @@ function Home() {
                 <Group spacing="xs" mt="xs">
                   {userLiked !== null ? (
                     <>
-                      <ActionIcon onClick={() => vote(true)}>
+                      <ActionIcon
+                        disabled={userLiked}
+                        onClick={() => vote(true)}>
                         {userLiked ? (
                           <ThumbUp
                             size={18}
@@ -301,7 +300,9 @@ function Home() {
                       ) : (
                         <Text>{abbreviate(likes, 0)}</Text>
                       )}
-                      <ActionIcon onClick={() => vote(false)}>
+                      <ActionIcon
+                        disabled={!userLiked}
+                        onClick={() => vote(false)}>
                         {userLiked ? (
                           <>
                             <ThumbDown
@@ -353,7 +354,11 @@ function Home() {
                     />
                   </Grid.Col>
                   <Grid.Col span={3}>
-                    <Button onClick={() => submitComment()}>Submit</Button>
+                    <Button
+                      disabled={comment.length === 0}
+                      onClick={() => submitComment()}>
+                      Submit
+                    </Button>
                   </Grid.Col>
                 </Grid>
                 <Text size="xs" color="dimmed">
