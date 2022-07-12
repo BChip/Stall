@@ -13,6 +13,7 @@
     "@extend-chrome/storage": "^1.5.0",
     "@mantine/core": "^4.2.7",
     "@mantine/hooks": "^4.2.7",
+    "@mantine/notifications": "^4.2.12",
     "bad-words": "^3.0.4",
     "firebase": "^9.8.2",
     "moment": "^2.29.3",

@@ -3,7 +3,6 @@ import {
   Button,
   Container,
   Grid,
-  Group,
   Menu,
   Modal,
   Paper,
@@ -12,12 +11,11 @@ import {
   Textarea
 } from "@mantine/core"
 import { getDoc } from "firebase/firestore"
-import { doc, setDoc } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
-import { auth, db } from "~config"
+import { auth } from "~config"
 
 import { createCommentReport, deleteComment, updateComment } from "./firebase"
 
@@ -26,7 +24,7 @@ function Comment({
   user,
   comment,
   createdAt,
-  setReportNotification,
+  openReportNotification,
   removeCommentFromView,
   updatedAt
 }) {
@@ -45,7 +43,7 @@ function Comment({
   const report = () => {
     setOpened(false)
     createCommentReport(reportReason, user, id)
-    setReportNotification()
+    openReportNotification()
   }
 
   const getUser = async () => {
