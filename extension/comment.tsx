@@ -11,11 +11,12 @@ import {
   Text,
   Textarea
 } from "@mantine/core"
-import { getDoc } from "firebase/firestore"
+import { getDoc, getDocFromCache, getDocFromServer } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
+import { isPastFiveMinutes, setLastFetch } from "~cachesettings"
 import { auth } from "~config"
 import { filterComment } from "~filter"
 import ReportCommentModal from "~reportcommentModal"
@@ -44,7 +45,14 @@ function Comment({
   const [updatedCommentError, setUpdatedCommentError] = useState("")
 
   const getUser = async () => {
-    const docSnap = await getDoc(user)
+    const isPast = await isPastFiveMinutes(user)
+    // get from cache first, then from server
+    let docSnap = await getDocFromCache(user)
+    // This only works if the site has data. So if a site has no siteFeelings, it will always ask the server.
+    if (!docSnap.exists() || isPast) {
+      docSnap = await getDocFromServer(user)
+      setLastFetch(user)
+    }
     if (docSnap.exists()) {
       const userData = docSnap.data()
       return userData
@@ -88,7 +96,7 @@ function Comment({
         setUserData(userData)
       })
       .catch((err) => {
-        console.log(err)
+        errorToast("Cannot get user data - " + err.message)
       })
   }, [])
 
