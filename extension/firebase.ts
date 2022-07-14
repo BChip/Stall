@@ -3,12 +3,16 @@ import {
   collection,
   doc,
   enableIndexedDbPersistence,
+  getDoc,
+  getDocFromCache,
+  getDocs,
   getDocsFromCache,
-  getDocsFromServer,
+  limit,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
+  startAfter,
   updateDoc,
   where
 } from "firebase/firestore"
@@ -35,34 +39,62 @@ export async function getSiteFeelings(b64Url) {
   const siteFeelings = collection(db, "siteFeelings")
   const siteFeelingsQuery = query(siteFeelings, where("url", "==", b64Url))
   // get from cache first, then from server
-  let querySnapshot = await getDocsFromCache(siteFeelingsQuery)
+  let querySnapshot
+  try {
+    querySnapshot = await getDocsFromCache(siteFeelingsQuery)
+  } catch (err) {}
+
   // This only works if the site has data. So if a site has no siteFeelings, it will always ask the server.
-  if (querySnapshot.empty || isPast) {
-    querySnapshot = await getDocsFromServer(siteFeelingsQuery)
-    setLastFetch(b64Url)
+  if (!querySnapshot || querySnapshot.empty || isPast) {
+    querySnapshot = await getDocs(siteFeelingsQuery)
+    await setLastFetch(b64Url)
   }
   return querySnapshot.docs.map((doc) => doc.data())
 }
 
-export async function getComments(b64Url, sort) {
+export async function getComments(
+  b64Url,
+  sort,
+  lastVisible = null,
+  limitNum = 10
+) {
   const isPast = await isPastFiveMinutes(b64Url)
   const commentsRef = collection(db, "comments")
-  const commentsQuery = query(
-    commentsRef,
-    where("url", "==", b64Url),
-    where("hidden", "==", false),
-    orderBy(sort, "desc")
-  )
+  let commentsQuery
+  if (lastVisible) {
+    commentsQuery = query(
+      commentsRef,
+      where("url", "==", b64Url),
+      where("hidden", "==", false),
+      orderBy(sort, "desc"),
+      startAfter(lastVisible.doc),
+      limit(limitNum)
+    )
+  } else {
+    commentsQuery = query(
+      commentsRef,
+      where("url", "==", b64Url),
+      where("hidden", "==", false),
+      orderBy(sort, "desc"),
+      limit(limitNum)
+    )
+  }
+
   // get from cache first, then from server
-  let querySnapshot = await getDocsFromCache(commentsQuery)
+  let querySnapshot
+  try {
+    querySnapshot = await getDocsFromCache(commentsQuery)
+  } catch (err) {}
+
   // This only works if the site has data. So if a site has no comments, it will always ask the server.
-  if (querySnapshot.empty || isPast) {
-    querySnapshot = await getDocsFromServer(commentsQuery)
-    setLastFetch(b64Url)
+  if (!querySnapshot || querySnapshot.empty || isPast) {
+    querySnapshot = await getDocs(commentsQuery)
+    await setLastFetch(b64Url)
   }
   return querySnapshot.docs.map((doc) => ({
     ...doc.data(),
-    id: doc.id
+    id: doc.id,
+    doc: doc
   }))
 }
 
@@ -106,4 +138,22 @@ export async function createCommentReport(reportReason, user, commentId) {
     comment: commentRef,
     user: userRef
   })
+}
+
+export async function getUser(user, b64Url) {
+  const isPast = await isPastFiveMinutes(b64Url)
+  // get from cache first, then from server
+  let docSnap
+  try {
+    docSnap = await getDocFromCache(user)
+  } catch (err) {}
+  // This only works if the site has data. So if a site has no siteFeelings, it will always ask the server.
+  if (!docSnap || !docSnap.exists() || isPast) {
+    docSnap = await getDoc(user)
+    await setLastFetch(b64Url)
+  }
+  if (docSnap.exists()) {
+    const userData = docSnap.data()
+    return userData
+  }
 }

@@ -18,7 +18,8 @@ import {
 } from "@mantine/core"
 import { NotificationsProvider } from "@mantine/notifications"
 import { onAuthStateChanged } from "firebase/auth"
-import { useEffect, useState } from "react"
+import { doc } from "firebase/firestore"
+import { useEffect, useRef, useState } from "react"
 import {
   AlertCircle,
   DoorExit,
@@ -62,6 +63,9 @@ function Home() {
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
   const [opened, setOpened] = useState(false)
+  const [lastFetch, setLastFetch] = useState(0)
+  const [doneScrolling, setDoneScrolling] = useState(false)
+  const viewport = useRef<HTMLDivElement>()
 
   const toggleColorScheme = (value?: ColorScheme) => {
     const color = colorScheme === "light" ? "dark" : "light"
@@ -96,15 +100,45 @@ function Home() {
     }
   }
 
-  const fetchComments = async (site, sort) => {
-    let comments
+  const onScrollPositionChange = async (cordinates) => {
+    // 20% of the viewport.current.scrollHeight
+    const scrollHeightThreshold =
+      viewport.current.scrollHeight - viewport.current.scrollHeight * 0.4
+    if (cordinates.y > scrollHeightThreshold && !isLoading && !doneScrolling) {
+      await fetchComments(siteB64Url, commentSort)
+    }
+  }
+
+  const fetchComments = async (site, sort, force = false) => {
+    let lastComment
+    if (comments) {
+      lastComment = comments[comments.length - 1]
+    }
+    let newComments
     try {
-      comments = await getComments(site, sort)
+      if (lastComment && !force) {
+        newComments = await getComments(site, sort, lastComment)
+      } else {
+        newComments = await getComments(site, sort)
+      }
     } catch (err) {
       errorToast("Fetching comments - " + err.message)
     }
-    if (comments) {
-      setComments(comments)
+    if (newComments) {
+      let concatenatedComments
+      if (force) {
+        concatenatedComments = [...newComments]
+      } else {
+        concatenatedComments = [...comments, ...newComments]
+      }
+
+      setLastFetch(concatenatedComments.length)
+      if (lastFetch === concatenatedComments.length && !force) {
+        setDoneScrolling(true)
+      } else {
+        setDoneScrolling(false)
+      }
+      setComments(concatenatedComments)
     }
   }
 
@@ -164,7 +198,7 @@ function Home() {
         if (!exception) {
           setComment("")
           setCommentError("")
-          fetchComments(siteB64Url, commentSort).catch((err) => {
+          fetchComments(siteB64Url, commentSort, true).catch((err) => {
             errorToast(err.message)
           })
         }
@@ -346,18 +380,26 @@ function Home() {
                       </Grid.Col>
                     </Grid>
 
-                    <ScrollArea style={{ height: 250 }}>
-                      {comments.map((comment) => (
-                        <Comment
-                          key={comment.id}
-                          id={comment.id}
-                          user={comment.user}
-                          comment={comment.text}
-                          createdAt={comment.createdAt.toDate().toISOString()}
-                          removeCommentFromView={removeCommentFromView}
-                          updatedAt={comment.updatedAt?.toDate().toISOString()}
-                        />
-                      ))}
+                    <ScrollArea
+                      style={{ height: 250 }}
+                      viewportRef={viewport}
+                      onScrollPositionChange={onScrollPositionChange}>
+                      {comments.map((comment) => {
+                        return (
+                          <Comment
+                            key={comment.id}
+                            id={comment.id}
+                            b64Url={siteB64Url}
+                            user={comment.user}
+                            comment={comment.text}
+                            createdAt={comment.createdAt.toDate().toISOString()}
+                            removeCommentFromView={removeCommentFromView}
+                            updatedAt={comment.updatedAt
+                              ?.toDate()
+                              .toISOString()}
+                          />
+                        )
+                      })}
                     </ScrollArea>
                   </>
                 </Container>

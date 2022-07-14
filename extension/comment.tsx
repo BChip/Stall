@@ -1,34 +1,30 @@
 import {
   Avatar,
   Button,
-  Container,
   Grid,
   Group,
   Menu,
-  Modal,
   Paper,
-  Select,
   Text,
   Textarea
 } from "@mantine/core"
-import { getDoc, getDocFromCache, getDocFromServer } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
-import { isPastFiveMinutes, setLastFetch } from "~cachesettings"
 import { auth } from "~config"
 import { filterComment } from "~filter"
-import ReportCommentModal from "~reportcommentModal"
-import { errorToast, reportThankYouToast, successToast } from "~toasts"
+import ReportCommentModal from "~reportcommentmodal"
+import { errorToast, successToast } from "~toasts"
 
-import { createCommentReport, deleteComment, updateComment } from "./firebase"
+import { deleteComment, getUser, updateComment } from "./firebase"
 
 function Comment({
   id,
   user,
   comment,
   createdAt,
+  b64Url,
   removeCommentFromView,
   updatedAt
 }) {
@@ -43,21 +39,6 @@ function Comment({
   const [updatedTime, setUpdatedTime] = useState(updatedAt)
 
   const [updatedCommentError, setUpdatedCommentError] = useState("")
-
-  const getUser = async () => {
-    const isPast = await isPastFiveMinutes(user)
-    // get from cache first, then from server
-    let docSnap = await getDocFromCache(user)
-    // This only works if the site has data. So if a site has no siteFeelings, it will always ask the server.
-    if (!docSnap.exists() || isPast) {
-      docSnap = await getDocFromServer(user)
-      setLastFetch(user)
-    }
-    if (docSnap.exists()) {
-      const userData = docSnap.data()
-      return userData
-    }
-  }
 
   const submitUpdatedComment = async () => {
     let filteredUpdatedCommentText
@@ -91,7 +72,7 @@ function Comment({
   }
 
   useEffect(() => {
-    getUser()
+    getUser(user, b64Url)
       .then((userData) => {
         setUserData(userData)
       })
