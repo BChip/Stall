@@ -28,19 +28,18 @@ import {
   ThumbUp
 } from "tabler-icons-react"
 
-import abbreviate from "~abbreviate"
-import Comment from "~comment"
-import { filterComment } from "~filter"
-import ReportIssueModal from "~reportissuemodal"
-import { errorToast } from "~toasts"
-
+import abbreviate from "./abbreviate"
+import Comment from "./comment"
 import { auth } from "./config"
+import { filterComment } from "./filter"
 import {
   createComment,
   createSiteFeeling,
   getComments,
   getSiteFeelings
 } from "./firebase"
+import ReportIssueModal from "./reportissuemodal"
+import { errorToast } from "./toasts"
 
 interface UserSettings {
   colorScheme: string
