@@ -5,7 +5,7 @@ import {
   onAuthStateChanged,
   signInWithCredential
 } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -45,7 +45,8 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
           email: user.email,
           photoUrl: user.photoURL,
           createdAt: new Date(),
-          user: user.uid
+          user: user.uid,
+          timeout: serverTimestamp()
         })
         navigate("/")
       }

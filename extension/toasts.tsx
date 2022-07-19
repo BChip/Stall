@@ -28,6 +28,16 @@ export function successToast(message) {
   })
 }
 
+export function tooManyRequests() {
+  showNotification({
+    title: "Uh oh!",
+    color: "red",
+    icon: <AlertCircle />,
+    message:
+      "You are sending too many requests... Please try again in a few minutes..."
+  })
+}
+
 export function justASecondToastOpen() {
   showNotification({
     id: "just-a-second",
