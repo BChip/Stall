@@ -19,12 +19,6 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
   const [user, setUser] = useState<User>(null)
   const navigate = useNavigate()
 
-  const onLogoutClicked = async () => {
-    if (user) {
-      await auth.signOut()
-    }
-  }
-
   const onLoginClicked = () => {
     chrome.identity.getAuthToken({ interactive: true }, async function (token) {
       if (chrome.runtime.lastError || !token) {

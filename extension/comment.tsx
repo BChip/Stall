@@ -1,33 +1,30 @@
 import {
   Avatar,
   Button,
-  Container,
   Grid,
   Group,
   Menu,
-  Modal,
   Paper,
-  Select,
   Text,
   Textarea
 } from "@mantine/core"
-import { getDoc } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
 import { auth } from "~config"
 import { filterComment } from "~filter"
-import ReportCommentModal from "~reportcommentModal"
-import { errorToast, reportThankYouToast, successToast } from "~toasts"
+import ReportCommentModal from "~reportcommentmodal"
+import { errorToast, successToast } from "~toasts"
 
-import { createCommentReport, deleteComment, updateComment } from "./firebase"
+import { deleteComment, getUser, updateComment } from "./firebase"
 
 function Comment({
   id,
   user,
   comment,
   createdAt,
+  b64Url,
   removeCommentFromView,
   updatedAt
 }) {
@@ -42,14 +39,6 @@ function Comment({
   const [updatedTime, setUpdatedTime] = useState(updatedAt)
 
   const [updatedCommentError, setUpdatedCommentError] = useState("")
-
-  const getUser = async () => {
-    const docSnap = await getDoc(user)
-    if (docSnap.exists()) {
-      const userData = docSnap.data()
-      return userData
-    }
-  }
 
   const submitUpdatedComment = async () => {
     let filteredUpdatedCommentText
@@ -83,12 +72,12 @@ function Comment({
   }
 
   useEffect(() => {
-    getUser()
+    getUser(user, b64Url)
       .then((userData) => {
         setUserData(userData)
       })
       .catch((err) => {
-        console.log(err)
+        errorToast("Cannot get user data - " + err.message)
       })
   }, [])
 
