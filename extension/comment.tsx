@@ -8,6 +8,7 @@ import {
   Text,
   Textarea
 } from "@mantine/core"
+import { error } from "console"
 import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
@@ -15,7 +16,7 @@ import { Flag, Pencil, Trash } from "tabler-icons-react"
 import { auth } from "~config"
 import { filterComment } from "~filter"
 import ReportCommentModal from "~reportcommentmodal"
-import { errorToast, successToast } from "~toasts"
+import { errorToast, successToast, tooManyRequests } from "~toasts"
 
 import { deleteComment, getUser, updateComment } from "./firebase"
 
@@ -56,7 +57,11 @@ function Comment({
         const time = moment().toISOString()
         setUpdatedTime(time)
       } catch (err) {
-        errorToast("Cannot update comment - " + err.message)
+        if (err.message.includes("permissions")) {
+          tooManyRequests()
+        } else {
+          errorToast("Cannot update comment - " + err.message)
+        }
       }
     }
   }
@@ -67,7 +72,11 @@ function Comment({
       removeCommentFromView(id)
       successToast("Comment Deleted!")
     } catch (err) {
-      errorToast("Cannot delete comment - " + err.message)
+      if (err.message.includes("permissions")) {
+        tooManyRequests()
+      } else {
+        errorToast("Cannot delete comment - " + err.message)
+      }
     }
   }
 

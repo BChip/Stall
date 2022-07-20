@@ -2,7 +2,7 @@ import { Button, Container, Modal, Select } from "@mantine/core"
 import { useState } from "react"
 
 import { createCommentReport } from "~firebase"
-import { errorToast, reportThankYouToast } from "~toasts"
+import { errorToast, reportThankYouToast, tooManyRequests } from "~toasts"
 
 function ReportCommentModal({ opened, setOpened, user, comment }) {
   const [reportReason, setReportReason] = useState("")
@@ -11,7 +11,12 @@ function ReportCommentModal({ opened, setOpened, user, comment }) {
     try {
       await createCommentReport(reportReason, user, comment)
     } catch (err) {
-      errorToast(err.message)
+      if (err.message.includes("permissions")) {
+        tooManyRequests()
+      } else {
+        errorToast(err.message)
+      }
+
       return
     }
     setOpened(false)

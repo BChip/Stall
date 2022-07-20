@@ -98,14 +98,17 @@ export async function getComments(
   }))
 }
 
-export async function createComment(comment, user, b64Url) {
-  await addDoc(collection(db, "comments"), {
+export async function createComment(comment: string, user, b64Url: string) {
+  const newComment = await addDoc(collection(db, "comments"), {
     text: comment,
     user: doc(db, `users/${user.uid}`),
     url: b64Url,
     createdAt: serverTimestamp(),
     hidden: false
   })
+  if (newComment.id) {
+    await updateUserLastTransaction(user.uid)
+  }
 }
 
 export async function deleteComment(commentId) {
@@ -128,6 +131,7 @@ export async function createSiteFeeling(feeling, user, b64Url) {
     user: userRef,
     like: feeling
   })
+  await updateUserLastTransaction(user.uid)
 }
 
 export async function createCommentReport(reportReason, user, commentId) {
@@ -137,6 +141,13 @@ export async function createCommentReport(reportReason, user, commentId) {
     reportReason,
     comment: commentRef,
     user: userRef
+  })
+  await updateUserLastTransaction(user.id)
+}
+
+export async function updateUserLastTransaction(userId: string) {
+  await updateDoc(doc(db, "users", userId), {
+    timeout: serverTimestamp()
   })
 }
 

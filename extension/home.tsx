@@ -40,7 +40,7 @@ import {
   getSiteFeelings
 } from "./firebase"
 import ReportIssueModal from "./reportissuemodal"
-import { errorToast } from "./toasts"
+import { errorToast, tooManyRequests } from "./toasts"
 
 interface UserSettings {
   colorScheme: string
@@ -190,8 +190,16 @@ function Home() {
       try {
         await createComment(filteredComment, user, siteB64Url)
       } catch (err) {
-        errorToast("Cannot create comment - " + err.message)
-        setCommentError("Cannot create comment - " + err.message)
+        if (err.message.includes("permissions")) {
+          const customError =
+            "You are sending too many requests... Please try again in a couple minutes..."
+          errorToast(customError)
+          setCommentError(customError)
+        } else {
+          const customError = "Cannot create comment - " + err.message
+          errorToast(customError)
+          setCommentError(customError)
+        }
         exception = true
       } finally {
         if (!exception) {
@@ -215,7 +223,12 @@ function Home() {
     try {
       await createSiteFeeling(feeling, user, siteB64Url)
     } catch (err) {
-      errorToast("Cannot update like/dislike - " + err.message)
+      if (err.message.includes("permissions")) {
+        tooManyRequests()
+      } else {
+        errorToast("Cannot update like/dislike - " + err.message)
+      }
+
       exception = true
     } finally {
       if (!exception) {
