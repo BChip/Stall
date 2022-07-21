@@ -11,8 +11,10 @@ import {
 function ReportIssueModal({ opened, setOpened }) {
   const [issueTitle, setIssueTitle] = useState("")
   const [issueDescription, setIssueDescription] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   const report = async () => {
+    setIsLoading(true)
     justASecondToastOpen()
     const app = "grafitti"
     try {
@@ -36,6 +38,7 @@ function ReportIssueModal({ opened, setOpened }) {
       errorToast(err.message)
     } finally {
       justASecondToastClose()
+      setIsLoading(false)
     }
   }
 
@@ -81,6 +84,7 @@ function ReportIssueModal({ opened, setOpened }) {
             disabled={issueDescription.length === 0 || issueTitle.length === 0}
             onClick={() => report()}
             mt="sm"
+            loading={isLoading}
             color={"red"}>
             Report
           </Button>

@@ -121,7 +121,13 @@ function Home() {
         newComments = await getComments(site, sort)
       }
     } catch (err) {
-      errorToast("Fetching comments - " + err.message)
+      if (err.message.includes("index")) {
+        errorToast(
+          "Cannot fetch and sort at this time. Please try again later."
+        )
+      } else {
+        errorToast("Fetching comments - " + err.message)
+      }
     }
     if (newComments) {
       let concatenatedComments
@@ -380,7 +386,7 @@ function Home() {
                       <Grid.Col span={3}>
                         <Text mt="xs">Comments:</Text>
                       </Grid.Col>
-                      <Grid.Col offset={4} span={5}>
+                      {/*<Grid.Col offset={4} span={5}>
                         <Select
                           value={commentSort}
                           onChange={(value) => setSort(value)}
@@ -389,11 +395,12 @@ function Home() {
                             { value: "text", label: "Alphabetical" }
                           ]}
                         />
-                      </Grid.Col>
+                        </Grid.Col>*/}
                     </Grid>
 
                     <ScrollArea
                       style={{ height: 250 }}
+                      mb="xs"
                       viewportRef={viewport}
                       onScrollPositionChange={onScrollPositionChange}>
                       {comments.map((comment) => {
@@ -405,6 +412,7 @@ function Home() {
                             user={comment.user}
                             comment={comment.text}
                             createdAt={comment.createdAt.toDate().toISOString()}
+                            loggedInUser={user}
                             removeCommentFromView={removeCommentFromView}
                             updatedAt={comment.updatedAt
                               ?.toDate()

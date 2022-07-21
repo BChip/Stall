@@ -27,7 +27,8 @@ function Comment({
   createdAt,
   b64Url,
   removeCommentFromView,
-  updatedAt
+  updatedAt,
+  loggedInUser
 }) {
   const [userData, setUserData] = useState({})
 
@@ -95,7 +96,7 @@ function Comment({
       <ReportCommentModal
         opened={opened}
         setOpened={setOpened}
-        user={user}
+        user={loggedInUser}
         comment={id}
       />
       <Paper mt="sm" shadow="sm" p="sm" withBorder={true}>
