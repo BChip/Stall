@@ -17,8 +17,8 @@ interface CacheSettings {
 
 const cacheSettings = getBucket<CacheSettings>("cacheSettingssssssssssssssss")
 
-// 5 minutes
-const fiveMinutes = 1000 * 60 * 5
+// 2 minutes
+const TTL = 1000 * 60 * 2
 
 // Check if the cache is expired
 export async function isPastFiveMinutes(site) {
@@ -30,7 +30,7 @@ export async function isPastFiveMinutes(site) {
   const diff = getDifference(settings, site)
 
   // if the difference is greater than 5 minutes, return true
-  return diff > fiveMinutes
+  return diff > TTL
 }
 
 export async function setLastFetch(site) {
@@ -44,7 +44,7 @@ export async function setLastFetch(site) {
     obj = settings.lastFetch
     // prevent overwriting the last fetch time for the same site
     const diff = getDifference(settings, site)
-    if (diff < fiveMinutes) {
+    if (diff < TTL) {
       return
     }
   }

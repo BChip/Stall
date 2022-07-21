@@ -1,9 +1,9 @@
 {
-  "name": "stall",
-  "displayName": "Stall",
-  "version": "0.0.0",
-  "description": "A basic Plasmo extension.",
-  "author": "bradleychippi",
+  "name": "graffiti.fyi",
+  "displayName": "Graffiti.Fyi",
+  "version": "1.0.0",
+  "description": "Tag any web page with simple words. Bring liking/disliking to every page/picture/video you visit online. Write a comment where it might be impossible or disabled. Share your thoughts with the world. The social network for the browser.",
+  "author": "graffiti.fyi",
   "packageManager": "yarn@1.22.18",
   "scripts": {
     "dev": "plasmo dev",
@@ -61,7 +61,7 @@
       "storage"
     ],
     "oauth2": {
-      "client_id": "132883317922-71ctr5jnlof41qo0jjbd0e7ga0k60j3o.apps.googleusercontent.com",
+      "client_id": "183388867518-8rm0n5988tjhkvitlc2em2171ol2ik6j.apps.googleusercontent.com",
       "scopes": [
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile"

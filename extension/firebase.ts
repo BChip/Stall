@@ -17,8 +17,7 @@ import {
   where
 } from "firebase/firestore"
 
-import { isPastFiveMinutes, setLastFetch } from "~cachesettings"
-
+import { isPastFiveMinutes, setLastFetch } from "./cachesettings"
 import { db } from "./config"
 
 enableIndexedDbPersistence(db).catch((err) => {
@@ -135,14 +134,14 @@ export async function createSiteFeeling(feeling, user, b64Url) {
 }
 
 export async function createCommentReport(reportReason, user, commentId) {
-  const userRef = doc(db, `users/${user.id}`)
+  const userRef = doc(db, `users/${user.uid}`)
   const commentRef = doc(db, `comments/${commentId}`)
   await setDoc(doc(db, "commentReports", userRef.id + commentRef.id), {
     reportReason,
     comment: commentRef,
     user: userRef
   })
-  await updateUserLastTransaction(user.id)
+  await updateUserLastTransaction(user.uid)
 }
 
 export async function updateUserLastTransaction(userId: string) {
