@@ -1,9 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=Source+Sans+Pro:wght@900&display=swap");
 
-* {
-  margin: 0;
-  text-decoration: none;
-}
+
 
 html,
 body {
@@ -272,4 +269,18 @@ span[class$=z] {
   text-shadow: 0px 0px #127D82, 1px 1px #0e5f63, 2px 2px #117479, 3px 3px #0c5255, 4px 4px #11797e, 5px 5px #0f676c, 6px 6px #0c565a, 7px 7px #11797e, 8px 8px #0e6367, 9px 9px #106c70, 10px 10px #106c70, 11px 11px #117479, 12px 12px #0c5255, 13px 13px #117479, 14px 14px #106c70, 15px 15px #0c5255, 16px 16px #0e5f63, 17px 17px #117479, 18px 18px #106c70, 19px 19px #0f676c, 20px 20px #0e5f63, 21px 21px #0f676c, 22px 22px #0d5b5e, 23px 23px #0e6367, 24px 24px #0c565a, 25px 25px #106c70, 26px 26px #0d5b5e, 27px 27px #0e6367, 28px 28px #0d5b5e;
   transform: perspective(120px) rotateX(4deg) rotateY(-21deg) translateY(0);
   transform-style: preserve-3d;
+}
+
+@media screen and (max-width: 1200px) {
+  #title_message {
+    display: none;
+  }
+
+}
+
+@media screen and (min-width: 1201px) {
+
+  #title_message_mobile {
+    display: none;
+  }
 }
