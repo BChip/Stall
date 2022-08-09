@@ -1,19 +1,20 @@
+import { Change, EventContext } from "firebase-functions/v1"
+import { QueryDocumentSnapshot } from "firebase-functions/v1/firestore"
+
+import type { Site } from "../../shared/types/Site"
+import type { SiteFeeling } from "../../shared/types/SiteFeeling"
+
 // The Cloud Functions for Firebase SDK to create Cloud Functions and set up triggers.
 const functions = require("firebase-functions")
 
 // The Firebase Admin SDK to access Firestore.
 const admin = require("firebase-admin")
+const { FieldValue } = require("firebase-admin/firestore")
 admin.initializeApp()
 
 const THRESHOLD = 1
 
 const reports = {} as { [key: string]: any }
-
-interface CommentReport {
-  comment: string
-  reportReason: string
-  reportedBy: string
-}
 
 exports.scheduledCommentReportingJob = functions.pubsub
   .schedule("every 24 hours")
@@ -86,3 +87,103 @@ exports.scheduledCommentReportingJob = functions.pubsub
 
     return null
   })
+
+exports.siteLikingDislikingOnCreate = functions.firestore
+  .document("siteFeelings/{docId}")
+  .onCreate(async (snapshot: QueryDocumentSnapshot, context: EventContext) => {
+    // Get the document
+    const siteFeeling = snapshot.data() as SiteFeeling
+
+    // Get the site id
+    const siteId = siteFeeling.b64Url
+
+    // Get the site
+    const siteRef = admin.firestore().collection("sites").doc(siteId)
+
+    // Get the site data if it exists
+    await siteRef.get().then(async (siteDoc: any) => {
+      if (siteDoc.exists) {
+        if (siteFeeling.like) {
+          // Increment the site likes
+          siteRef.update({ likes: FieldValue.increment(1) })
+        } else {
+          // Increment the site dislikes
+          siteRef.update({ dislikes: FieldValue.increment(1) })
+        }
+      } else {
+        // Create a new site object
+        let likes = 0
+        let dislikes = 0
+
+        if (siteFeeling.like) {
+          likes++
+        } else {
+          dislikes++
+        }
+
+        const newSite: Site = {
+          likes: likes,
+          dislikes: dislikes,
+          url: siteFeeling.url
+        }
+
+        // Create document in sites collection
+        const sitesRef = admin.firestore().collection("sites")
+        await sitesRef.doc(siteId).set(newSite)
+      }
+    })
+
+    return null
+  })
+
+exports.siteLikingDislikingOnUpdate = functions.firestore
+  .document("siteFeelings/{docId}")
+  .onUpdate(
+    async (change: Change<QueryDocumentSnapshot>, context: EventContext) => {
+      // Get the document
+      const siteFeeling = change.after.data() as SiteFeeling
+
+      // Get the site id
+      const siteId = siteFeeling.b64Url
+
+      // Get the site
+      const siteRef = admin.firestore().collection("sites").doc(siteId)
+
+      // Get the site data if it exists
+      await siteRef.get().then(async (siteDoc: any) => {
+        const site: Site = siteDoc.data()
+
+        // Get the site feelings
+        const siteLikes = site.likes ?? 0
+
+        // Get the site feeling
+        const siteDislikes = site.dislikes ?? 0
+
+        if (siteFeeling.like) {
+          if (siteDislikes === 0) {
+            await siteRef.update({
+              likes: FieldValue.increment(1)
+            })
+          } else {
+            await siteRef.update({
+              likes: FieldValue.increment(1),
+              dislikes: FieldValue.increment(-1)
+            })
+          }
+        } else {
+          if (siteLikes === 0) {
+            await siteRef.update({
+              dislikes: FieldValue.increment(1)
+            })
+          } else {
+            await siteRef.update({
+              likes: FieldValue.increment(-1),
+              dislikes: FieldValue.increment(1)
+            })
+          }
+        }
+      })
+
+      return null
+    }
+  )

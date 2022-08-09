@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals"
 
-import abbreviate from "../abbreviate"
+import abbreviate from "../utilities/abbreviate"
 
 describe("abbreviates numbers", () => {
   it("should turn 5 into 5", () => {

@@ -1,16 +1,13 @@
 import { browserLocalPersistence, setPersistence } from "firebase/auth"
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 
-import Home from "~home"
-import Login from "~login"
-
-import AuthRoute from "./authroute"
+import AuthRoute from "./components/authroute"
+import Login from "./components/login"
 import { auth } from "./config"
+import Home from "./home"
 
 setPersistence(auth, browserLocalPersistence)
-
-export interface IApplicationProps {}
 
 function IndexPopup() {
   return (

@@ -12,13 +12,11 @@ import {
   MantineProvider,
   Menu,
   ScrollArea,
-  Select,
   Text,
   Textarea
 } from "@mantine/core"
 import { NotificationsProvider } from "@mantine/notifications"
 import { onAuthStateChanged } from "firebase/auth"
-import { doc } from "firebase/firestore"
 import { useEffect, useRef, useState } from "react"
 import {
   AlertCircle,
@@ -29,88 +27,109 @@ import {
   ThumbUp
 } from "tabler-icons-react"
 
-import abbreviate from "./abbreviate"
-import Comment from "./comment"
+import type { Comment } from "../shared/types/Comment"
+import type { User } from "../shared/types/User"
+import type { Site } from "../shared/types/Site"
+import type { SiteFeeling } from "../shared/types/SiteFeeling"
+import abbreviate from "./utilities/abbreviate"
+import Comment from "./components/comment"
 import { auth } from "./config"
-import { filterComment } from "./filter"
+import { filterComment } from "./utilities/filter"
 import {
   createComment,
   createSiteFeeling,
   getComments,
-  getSiteFeelings
-} from "./firebase"
-import ReportIssueModal from "./reportissuemodal"
-import { errorToast, tooManyRequests } from "./toasts"
+  getSite,
+  getUserLiked
+} from "./db/firebase"
+import ReportIssueModal from "./components/reportissuemodal"
+import { errorToast, successToast, tooManyRequests } from "./utilities/toasts"
 
 interface UserSettings {
   colorScheme: string
 }
 
+interface Coordinates {
+  x: number
+  y: number
+}
+
 const userSettings = getBucket<UserSettings>("userSettings")
 
 function Home() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState(null)
-  const [colorScheme, setColorScheme] = useState<ColorScheme>(null)
+  const [isFetching, setisFetching] = useState(true)
+  const [isPushing, setIsPushing] = useState(false)
+  const [user, setUser] = useState({} as User)
+  const [colorScheme, setColorScheme] = useState<ColorScheme>({} as ColorScheme)
   const [comment, setComment] = useState("")
-  const [comments, setComments] = useState([])
+  const [comments, setComments] = useState<Comment[]>([])
   const [likes, setLikes] = useState(0)
-  const [userLiked, setUserLiked] = useState(null)
+  const [userLiked, setUserLiked] = useState<boolean | null>(null)
   const [siteB64Url, setSiteB64Url] = useState("")
+  const [siteUrl, setSiteUrl] = useState("")
   const [commentError, setCommentError] = useState("")
   const [dislikes, setDislikes] = useState(0)
   const dark = colorScheme === "dark"
   const [commentSort, setCommentSort] = useState("createdAt")
   const [opened, setOpened] = useState(false)
-  const [lastFetch, setLastFetch] = useState(0)
+  const [lastFetchComments, setLastFetchComments] = useState(0)
   const [doneScrolling, setDoneScrolling] = useState(false)
   const viewport = useRef<HTMLDivElement>()
 
   const toggleColorScheme = (value?: ColorScheme) => {
     const color = colorScheme === "light" ? "dark" : "light"
-    userSettings.set({ colorScheme: value || color })
-    setColorScheme(value || color)
+    userSettings
+      .set({ colorScheme: value ?? color })
+      .catch((err) => errorToast("Can't save color scheme. Try again later."))
+    setColorScheme(value ?? color)
   }
 
-  const fetchSiteFeelings = async (user, site) => {
-    let siteFeelings
+  const fetchSiteFeelings = async (
+    user: User,
+    b64Url: string,
+    force = false
+  ) => {
+    let site: Site | null = null
+    let siteFeeling: SiteFeeling | null = null
     try {
-      siteFeelings = await getSiteFeelings(site)
+      site = await getSite(b64Url)
+      siteFeeling = await getUserLiked(user, b64Url, force)
     } catch (err) {
-      errorToast("Fetching site likes and dislikes - " + err.message)
+      let errorMessage = "Error. Try again later."
+      if (err instanceof Error) {
+        errorMessage = err.message
+      }
+      errorToast("Fetching site likes and dislikes - " + errorMessage)
     }
-    if (siteFeelings) {
-      const likes = siteFeelings.filter(
-        (siteFeeling) => siteFeeling.like
-      ).length
-      const dislikes = siteFeelings.filter(
-        (siteFeeling) => !siteFeeling.like
-      ).length
-      const userLiked = siteFeelings.find(
-        (siteFeeling) => siteFeeling.user.id === user.uid
-      )
-      setLikes(likes)
-      setDislikes(dislikes)
-      if (userLiked) {
-        setUserLiked(userLiked.like)
-      } else {
-        setUserLiked(null)
+    if (site) {
+      setLikes(site.likes)
+      setDislikes(site.dislikes)
+    }
+    if (siteFeeling) {
+      setUserLiked(siteFeeling.like)
+    } else {
+      setUserLiked(null)
+    }
+  }
+
+  const onScrollPositionChange = async (cordinates: Coordinates) => {
+    // 20% of the viewport.current.scrollHeight
+    if (viewport.current) {
+      const scrollHeightThreshold =
+        viewport.current.scrollHeight - viewport.current.scrollHeight * 0.4
+      if (
+        cordinates.y > scrollHeightThreshold &&
+        !isFetching &&
+        !doneScrolling
+      ) {
+        await fetchComments(siteB64Url, commentSort)
       }
     }
   }
 
-  const onScrollPositionChange = async (cordinates) => {
-    // 20% of the viewport.current.scrollHeight
-    const scrollHeightThreshold =
-      viewport.current.scrollHeight - viewport.current.scrollHeight * 0.4
-    if (cordinates.y > scrollHeightThreshold && !isLoading && !doneScrolling) {
-      await fetchComments(siteB64Url, commentSort)
-    }
-  }
-
-  const fetchComments = async (site, sort, force = false) => {
+  const fetchComments = async (site: string, sort: string, force = false) => {
     let lastComment
-    if (comments) {
+    if (comments.length > 0) {
       lastComment = comments[comments.length - 1]
     }
     let newComments
@@ -121,24 +140,28 @@ function Home() {
         newComments = await getComments(site, sort)
       }
     } catch (err) {
-      if (err.message.includes("index")) {
+      let errorMessage = "Error. Try again later."
+      if (err instanceof Error) {
+        errorMessage = err.message
+      }
+      if (errorMessage.includes("index")) {
         errorToast(
           "Cannot fetch and sort at this time. Please try again later."
         )
       } else {
-        errorToast("Fetching comments - " + err.message)
+        errorToast("Fetching comments - " + errorMessage)
       }
     }
     if (newComments) {
-      let concatenatedComments
+      let concatenatedComments: Comment[] = []
       if (force) {
         concatenatedComments = [...newComments]
       } else {
         concatenatedComments = [...comments, ...newComments]
       }
 
-      setLastFetch(concatenatedComments.length)
-      if (lastFetch === concatenatedComments.length && !force) {
+      setLastFetchComments(concatenatedComments.length)
+      if (lastFetchComments === concatenatedComments.length && !force) {
         setDoneScrolling(true)
       } else {
         setDoneScrolling(false)
@@ -148,14 +171,14 @@ function Home() {
   }
 
   const getCurrentTab = async () => {
-    let queryOptions = { active: true, currentWindow: true }
-    let tabs = await chrome.tabs.query(queryOptions)
-    return tabs[0].url
+    const queryOptions = { active: true, currentWindow: true }
+    const tabs = await chrome.tabs.query(queryOptions)
+    return tabs[0]?.url
   }
 
   const getColorScheme = async () => {
     const settings = await userSettings.get()
-    setColorScheme(settings.colorScheme)
+    setColorScheme(settings.colorScheme as ColorScheme)
   }
 
   useEffect(() => {
@@ -167,6 +190,7 @@ function Home() {
           const b64Url = Buffer.from(tabUrl)
             .toString("base64")
             .replace("/", "_")
+          setSiteUrl(tabUrl)
           setSiteB64Url(b64Url)
           fetchSiteFeelings(user, b64Url).catch((err) => {
             errorToast(err.message)
@@ -174,7 +198,7 @@ function Home() {
           fetchComments(b64Url, commentSort).catch((err) => {
             errorToast(err.message)
           })
-          setIsLoading(false)
+          setisFetching(false)
         })
       } else {
       }
@@ -184,25 +208,34 @@ function Home() {
   }, [auth])
 
   const submitComment = async () => {
+    setIsPushing(true)
     let filteredComment
     try {
       filteredComment = filterComment(comment)
     } catch (error) {
-      errorToast(error.message)
-      setCommentError(error.message)
+      let errorMessage = "Error. Try again later."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      errorToast(errorMessage)
+      setCommentError(errorMessage)
     }
     if (filteredComment) {
       let exception = false
       try {
         await createComment(filteredComment, user, siteB64Url)
       } catch (err) {
-        if (err.message.includes("permissions")) {
+        let errorMessage = "Error. Try again later."
+        if (err instanceof Error) {
+          errorMessage = err.message
+        }
+        if (errorMessage.includes("permissions")) {
           const customError =
             "You are sending too many requests... Please try again in a couple minutes..."
           errorToast(customError)
           setCommentError(customError)
         } else {
-          const customError = "Cannot create comment - " + err.message
+          const customError = "Cannot create comment - " + errorMessage
           errorToast(customError)
           setCommentError(customError)
         }
@@ -212,43 +245,58 @@ function Home() {
           setComment("")
           setCommentError("")
           fetchComments(siteB64Url, commentSort, true).catch((err) => {
-            errorToast(err.message)
+            let errorMessage = "Error. Try again later."
+            if (err instanceof Error) {
+              errorMessage = err.message
+            }
+            errorToast(errorMessage)
           })
         }
       }
+      setIsPushing(false)
     }
   }
 
-  const removeCommentFromView = (commentId) => {
+  const removeCommentFromView = (commentId: string) => {
     const newComments = comments.filter((comment) => comment.id !== commentId)
     setComments(newComments)
   }
 
-  const vote = async (feeling) => {
+  const vote = async (feeling: boolean) => {
+    setIsPushing(true)
     let exception = false
     try {
-      await createSiteFeeling(feeling, user, siteB64Url)
+      await createSiteFeeling(feeling, user, siteB64Url, siteUrl)
     } catch (err) {
-      if (err.message.includes("permissions")) {
+      let errorMessage = "Error. Try again later."
+      if (err instanceof Error) {
+        errorMessage = err.message
+      }
+      if (errorMessage.includes("permissions")) {
         tooManyRequests()
       } else {
-        errorToast("Cannot update like/dislike - " + err.message)
+        errorToast("Cannot update like/dislike - " + errorMessage)
       }
-
       exception = true
     } finally {
       if (!exception) {
-        fetchSiteFeelings(user, siteB64Url).catch((err) => {
-          errorToast(err.message)
+        fetchSiteFeelings(user, siteB64Url, true).catch((err) => {
+          let errorMessage = "Error. Try again later."
+          if (err instanceof Error) {
+            errorMessage = err.message
+          }
+          errorToast(errorMessage)
         })
+        successToast("We are processing the request...")
       }
     }
+    setIsPushing(false)
   }
 
-  const setSort = (value) => {
-    setCommentSort(value)
-    fetchComments(siteB64Url, value)
-  }
+  // const setSort = (value) => {
+  //   setCommentSort(value)
+  //   fetchComments(siteB64Url, value)
+  // }
 
   return (
     <div style={{ minWidth: "500px" }}>
@@ -259,7 +307,7 @@ function Home() {
         <></>
       ) : (
         <>
-          <LoadingOverlay visible={isLoading} overlayOpacity={0} />
+          <LoadingOverlay visible={isFetching} overlayOpacity={0} />
           <ColorSchemeProvider
             colorScheme={colorScheme}
             toggleColorScheme={toggleColorScheme}>
@@ -285,7 +333,7 @@ function Home() {
                       </Menu.Item>
                       <Menu.Item
                         icon={<DoorExit size={14} />}
-                        onClick={() => auth.signOut()}>
+                        onClick={() => void auth.signOut()}>
                         Sign out
                       </Menu.Item>
                     </Menu>
@@ -294,8 +342,8 @@ function Home() {
                     {userLiked !== null ? (
                       <>
                         <ActionIcon
-                          disabled={userLiked}
-                          onClick={() => vote(true)}>
+                          disabled={userLiked || isPushing}
+                          onClick={() => void vote(true)}>
                           {userLiked ? (
                             <ThumbUp
                               size={18}
@@ -317,8 +365,8 @@ function Home() {
                           <Text>{abbreviate(likes, 0)}</Text>
                         )}
                         <ActionIcon
-                          disabled={!userLiked}
-                          onClick={() => vote(false)}>
+                          disabled={!userLiked || isPushing}
+                          onClick={() => void vote(false)}>
                           {userLiked ? (
                             <>
                               <ThumbDown
@@ -344,11 +392,15 @@ function Home() {
                       </>
                     ) : (
                       <>
-                        <ActionIcon onClick={() => vote(true)}>
+                        <ActionIcon
+                          onClick={() => void vote(true)}
+                          disabled={isPushing}>
                           <ThumbUp strokeWidth={2} size={18} color={"green"} />
                         </ActionIcon>
                         <Text>{likes}</Text>
-                        <ActionIcon onClick={() => vote(false)}>
+                        <ActionIcon
+                          onClick={() => void vote(false)}
+                          disabled={isPushing}>
                           <ThumbDown strokeWidth={2} size={18} color={"red"} />
                         </ActionIcon>
                         <Text>{dislikes}</Text>
@@ -371,8 +423,8 @@ function Home() {
                     </Grid.Col>
                     <Grid.Col span={3}>
                       <Button
-                        disabled={comment.length === 0}
-                        onClick={() => submitComment()}>
+                        disabled={comment.length === 0 || isPushing}
+                        onClick={() => void submitComment()}>
                         Submit
                       </Button>
                     </Grid.Col>
@@ -402,6 +454,7 @@ function Home() {
                       style={{ height: 250 }}
                       mb="xs"
                       viewportRef={viewport}
+                      // eslint-disable-next-line @typescript-eslint/no-misused-promises
                       onScrollPositionChange={onScrollPositionChange}>
                       {comments.map((comment) => {
                         return (
@@ -409,7 +462,7 @@ function Home() {
                             key={comment.id}
                             id={comment.id}
                             b64Url={siteB64Url}
-                            user={comment.user}
+                            userDoc={comment.user}
                             comment={comment.text}
                             createdAt={comment.createdAt.toDate().toISOString()}
                             loggedInUser={user}

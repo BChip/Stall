@@ -1,7 +1,7 @@
 {
   "extends": "plasmo/templates/tsconfig.base",
   "exclude": ["node_modules"],
-  "include": [".plasmo/**/*", "./**/*.ts", "./**/*.tsx"],
+  "include": [".plasmo/**/*", "./**/*.ts", "./**/*.tsx", "../shared/types/Comment.ts", "../shared/types/User.ts", "../shared/types/SiteFeeling.ts", "../shared/types/Site.ts"],
   "compilerOptions": {
     "paths": {
       "~*": ["./*"]

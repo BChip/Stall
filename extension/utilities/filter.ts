@@ -1,11 +1,11 @@
 import Filter from "bad-words"
 
 const urlDomainRegex =
-  /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+  /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 
-let filter = new Filter()
+const filter = new Filter()
 
-export function filterComment(comment) {
+export function filterComment(comment: string): string {
   if (comment.match(urlDomainRegex)) {
     throw new Error("Please don't use Domains or URLs in comments.")
   }

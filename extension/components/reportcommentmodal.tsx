@@ -1,16 +1,27 @@
 import { Button, Container, Modal, Select } from "@mantine/core"
 import { useState } from "react"
 
-import { createCommentReport } from "~firebase"
-import { errorToast, reportThankYouToast, tooManyRequests } from "~toasts"
+import { createCommentReport } from "../db/firebase"
+import {
+  errorToast,
+  reportThankYouToast,
+  tooManyRequests
+} from "../utilities/toasts"
 
-function ReportCommentModal({ opened, setOpened, user, comment }) {
+interface Props {
+  opened: boolean
+  setOpened: unknown
+  user: any
+  commentId: string
+}
+
+function ReportCommentModal({ opened, setOpened, user, commentId }: Props) {
   const [reportReason, setReportReason] = useState("")
 
   const report = async () => {
     try {
-      await createCommentReport(reportReason, user, comment)
-    } catch (err) {
+      await createCommentReport(reportReason, user, commentId)
+    } catch (err: unknown) {
       if (err.message.includes("permissions")) {
         tooManyRequests()
       } else {
@@ -36,7 +47,7 @@ function ReportCommentModal({ opened, setOpened, user, comment }) {
             required
             allowDeselect
             value={reportReason}
-            onChange={setReportReason}
+            onChange={() => setReportReason}
             data={[
               {
                 value: "commercial",
@@ -54,7 +65,7 @@ function ReportCommentModal({ opened, setOpened, user, comment }) {
               { value: "misinformation", label: "Misinformation" }
             ]}
           />
-          <Button onClick={() => report()} mt="sm" color={"red"}>
+          <Button onClick={() => void report()} mt="sm" color={"red"}>
             Report
           </Button>
         </Container>

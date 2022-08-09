@@ -8,29 +8,40 @@ import {
   Text,
   Textarea
 } from "@mantine/core"
-import { error } from "console"
+import type { DocumentReference } from "firebase/firestore"
 import moment from "moment"
 import { useEffect, useState } from "react"
 import { Flag, Pencil, Trash } from "tabler-icons-react"
 
-import { auth } from "~config"
-import { filterComment } from "~filter"
-import ReportCommentModal from "~reportcommentmodal"
-import { errorToast, successToast, tooManyRequests } from "~toasts"
+import type { User } from "../../shared/types/User"
+import { auth } from "../config"
+import { deleteComment, getUser, updateComment } from "../db/firebase"
+import { filterComment } from "../utilities/filter"
+import { errorToast, successToast, tooManyRequests } from "../utilities/toasts"
+import ReportCommentModal from "./reportcommentmodal"
 
-import { deleteComment, getUser, updateComment } from "./firebase"
+interface Props {
+  id: string
+  userDoc: DocumentReference
+  comment: string
+  createdAt: string
+  b64Url: string
+  removeCommentFromView: unknown
+  updatedAt: string
+  loggedInUser: User
+}
 
 function Comment({
   id,
-  user,
+  userDoc,
   comment,
   createdAt,
   b64Url,
   removeCommentFromView,
   updatedAt,
   loggedInUser
-}) {
-  const [userData, setUserData] = useState({})
+}: Props) {
+  const [userData, setUserData] = useState<User>({} as User)
 
   const [opened, setOpened] = useState(false)
 
@@ -47,8 +58,12 @@ function Comment({
     try {
       filteredUpdatedCommentText = filterComment(updatedCommentText)
     } catch (error) {
-      errorToast(error.message)
-      setUpdatedCommentError(error.message)
+      let errorMessage = "Error. Please try again later."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      errorToast(errorMessage)
+      setUpdatedCommentError(errorMessage)
     }
     if (filteredUpdatedCommentText) {
       try {
@@ -58,10 +73,14 @@ function Comment({
         const time = moment().toISOString()
         setUpdatedTime(time)
       } catch (err) {
-        if (err.message.includes("permissions")) {
+        let errorMessage = "Error. Please try again later."
+        if (err instanceof Error) {
+          errorMessage = err.message
+        }
+        if (errorMessage.includes("permissions")) {
           tooManyRequests()
         } else {
-          errorToast("Cannot update comment - " + err.message)
+          errorToast("Cannot update comment - " + errorMessage)
         }
       }
     }
@@ -73,21 +92,29 @@ function Comment({
       removeCommentFromView(id)
       successToast("Comment Deleted!")
     } catch (err) {
-      if (err.message.includes("permissions")) {
+      let errorMessage = "Error. Please try again later."
+      if (err instanceof Error) {
+        errorMessage = err.message
+      }
+      if (errorMessage.includes("permissions")) {
         tooManyRequests()
       } else {
-        errorToast("Cannot delete comment - " + err.message)
+        errorToast("Cannot delete comment - " + errorMessage)
       }
     }
   }
 
   useEffect(() => {
-    getUser(user, b64Url)
+    getUser(userDoc, b64Url)
       .then((userData) => {
         setUserData(userData)
       })
       .catch((err) => {
-        errorToast("Cannot get user data - " + err.message)
+        let errorMessage = "Error. Please try again later."
+        if (err instanceof Error) {
+          errorMessage = err.message
+        }
+        errorToast("Cannot get user data - " + errorMessage)
       })
   }, [])
 
@@ -102,10 +129,10 @@ function Comment({
       <Paper mt="sm" shadow="sm" p="sm" withBorder={true}>
         <Grid columns={48}>
           <Grid.Col span={5}>
-            {userData.photoUrl ? (
+            {userData.photoURL ? (
               <Avatar
                 size="md"
-                src={userData.photoUrl}
+                src={userData.photoURL}
                 radius="xl"
                 mt="xs"></Avatar>
             ) : (
@@ -116,7 +143,7 @@ function Comment({
             <Grid>
               <Grid.Col span={10}>
                 <Text size="xs" mt="xs" color="dimmed">
-                  {userData.name} -{" "}
+                  {userData.displayName} -{" "}
                   {updatedTime
                     ? moment(updatedTime).fromNow() + " (edited)"
                     : moment(createdAt).fromNow()}
@@ -124,7 +151,7 @@ function Comment({
               </Grid.Col>
               <Grid.Col span={2}>
                 <Menu ml="md" size="xs">
-                  {user.id === auth.currentUser.uid ? (
+                  {userDoc.id === auth.currentUser?.uid ? (
                     <>
                       <Menu.Item
                         icon={<Pencil size={12} color={"black"} />}
@@ -133,7 +160,7 @@ function Comment({
                       </Menu.Item>
                       <Menu.Item
                         icon={<Trash size={12} color={"red"} />}
-                        onClick={() => delComment()}>
+                        onClick={() => void delComment()}>
                         Delete
                       </Menu.Item>
                     </>
@@ -168,7 +195,7 @@ function Comment({
                       updatedCommentText === comment ||
                       updatedCommentText.length === 0
                     }
-                    onClick={() => submitUpdatedComment()}>
+                    onClick={() => void submitUpdatedComment()}>
                     Submit
                   </Button>
                   <Button
