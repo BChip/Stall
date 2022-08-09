@@ -9,20 +9,18 @@ import { doc, serverTimestamp, setDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { auth } from "./config"
-import { db } from "./config"
+import { auth, db } from "../config"
 
 export interface ILoginPageProps {}
 
-const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
+const Login: React.FunctionComponent<ILoginPageProps> = () => {
   const [isLoading, setIsLoading] = useState(false)
-  const [user, setUser] = useState<User>(null)
+  const [user, setUser] = useState<User>()
   const navigate = useNavigate()
 
   const onLoginClicked = () => {
     chrome.identity.getAuthToken({ interactive: true }, async function (token) {
       if (chrome.runtime.lastError || !token) {
-        console.error(chrome.runtime.lastError)
         setIsLoading(false)
         return
       }
@@ -40,11 +38,12 @@ const Login: React.FunctionComponent<ILoginPageProps> = (props) => {
       setIsLoading(false)
       if (user) {
         setUser(user)
-        setDoc(doc(db, "users", user.uid), {
-          name: user.displayName,
+        void setDoc(doc(db, "users", user.uid), {
+          displayName: user.displayName,
           email: user.email,
-          photoUrl: user.photoURL,
+          photoURL: user.photoURL,
           createdAt: new Date(),
+          uid: user.uid,
           user: user.uid,
           timeout: serverTimestamp()
         })

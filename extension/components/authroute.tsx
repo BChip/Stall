@@ -2,7 +2,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth"
 import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { auth } from "./config"
+import { auth } from "../config"
 
 export interface IAuthRouteProps {}
 

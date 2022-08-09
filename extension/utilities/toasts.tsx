@@ -1,5 +1,5 @@
 import { showNotification, updateNotification } from "@mantine/notifications"
-import { AlertCircle, Check, Send } from "tabler-icons-react"
+import { AlertCircle, Check } from "tabler-icons-react"
 
 export function reportThankYouToast() {
   showNotification({
@@ -10,7 +10,7 @@ export function reportThankYouToast() {
   })
 }
 
-export function errorToast(message) {
+export function errorToast(message: string) {
   showNotification({
     title: "Uh oh!",
     color: "red",
@@ -19,7 +19,7 @@ export function errorToast(message) {
   })
 }
 
-export function successToast(message) {
+export function successToast(message: string) {
   showNotification({
     title: "Success!",
     color: "teal",

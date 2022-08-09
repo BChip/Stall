@@ -11,29 +11,31 @@ import { getBucket } from "@extend-chrome/storage"
 }
  */
 interface CacheSettings {
-  lastFetch: object
+  lastFetch: Record<string, string>
   userCreated: boolean
 }
 
-const cacheSettings = getBucket<CacheSettings>("cacheSettingssssssssssssssss")
+const cacheSettings = getBucket<CacheSettings>("local1")
 
-// 2 minutes
-const TTL = 1000 * 60 * 2
+// 30 seconds
+const TTL = 30000
 
 // Check if the cache is expired
-export async function isPastFiveMinutes(site) {
+export async function isPastFiveMinutes(site: string) {
   const settings = await cacheSettings.get()
   // if there is no settings, return true
   if (!settings.lastFetch) {
     return true
   }
   const diff = getDifference(settings, site)
-
+  if (diff === 0) {
+    return true
+  }
   // if the difference is greater than 5 minutes, return true
   return diff > TTL
 }
 
-export async function setLastFetch(site) {
+export async function setLastFetch(site: string) {
   // get cache settings from storage
   const settings = await cacheSettings.get()
   let obj
@@ -42,20 +44,18 @@ export async function setLastFetch(site) {
     obj = {}
   } else {
     obj = settings.lastFetch
-    // prevent overwriting the last fetch time for the same site
-    const diff = getDifference(settings, site)
-    if (diff < TTL) {
-      return
-    }
   }
   // store the current time in the lastFetch object as iso string
   obj[site] = new Date().toISOString()
   await cacheSettings.set({ lastFetch: obj })
 }
 
-function getDifference(settings, key) {
+function getDifference(settings: CacheSettings, key: string): number {
   const siteLastFetch = settings.lastFetch[key]
   // get the last fetch time and the current time in date format
+  if (!siteLastFetch) {
+    return 0
+  }
   const lastFetch = new Date(siteLastFetch)
   const currentTime = new Date()
   // find the difference between the two times

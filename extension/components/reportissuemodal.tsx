@@ -1,14 +1,19 @@
 import { Button, Container, Modal, Text, Textarea } from "@mantine/core"
-import { useState } from "react"
+import { FunctionComponent, SetStateAction, useState } from "react"
 
 import {
   errorToast,
   justASecondToastClose,
   justASecondToastOpen,
   reportThankYouToast
-} from "~toasts"
+} from "../utilities/toasts"
 
-function ReportIssueModal({ opened, setOpened }) {
+interface Props {
+  opened: boolean
+  setOpened: unknown
+}
+
+function ReportIssueModal({ opened, setOpened }: Props) {
   const [issueTitle, setIssueTitle] = useState("")
   const [issueDescription, setIssueDescription] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -34,7 +39,7 @@ function ReportIssueModal({ opened, setOpened }) {
       } else {
         throw new Error(data)
       }
-    } catch (err) {
+    } catch (err: any) {
       errorToast(err.message)
     } finally {
       justASecondToastClose()
@@ -82,7 +87,7 @@ function ReportIssueModal({ opened, setOpened }) {
           </Text>
           <Button
             disabled={issueDescription.length === 0 || issueTitle.length === 0}
-            onClick={() => report()}
+            onClick={() => void report()}
             mt="sm"
             loading={isLoading}
             color={"red"}>
